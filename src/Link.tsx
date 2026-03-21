@@ -18,6 +18,7 @@ export interface FolderItem {
   type: 'folder'
   name: string
   description: string
+  password?: string
   children: TreeItem[]
 }
 
@@ -25,7 +26,7 @@ export type TreeItem = LinkItem | FolderItem
 
 interface BreadcrumbEntry { id: string; name: string }
 type FormMode = 'link' | 'folder'
-interface FormState { name: string; description: string; href: string }
+interface FormState { name: string; description: string; href: string; password: string }
 
 /* ─────────────────────────────────────────────
    Tree helpers (pure functions)
@@ -80,7 +81,7 @@ function buildBreadcrumbs(children: TreeItem[], path: string[]): BreadcrumbEntry
    Default data
    ───────────────────────────────────────────── */
 
-const EMPTY_FORM: FormState = { name: '', description: '', href: '' }
+const EMPTY_FORM: FormState = { name: '', description: '', href: '', password: '' }
 
 /* ─────────────────────────────────────────────
    Icons
@@ -119,12 +120,11 @@ function HomeIcon() {
   )
 }
 
-function DownloadIcon() {
+function LockIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
   )
 }
@@ -191,6 +191,13 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
   const [formMode, setFormMode] = useState<FormMode>('link')
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
 
+  // Password modal
+  type PwdAction = 'enter' | 'edit' | 'delete'
+  interface PasswordModal { action: PwdAction; itemId: string }
+  const [passwordModal, setPasswordModal] = useState<PasswordModal | null>(null)
+  const [passwordInput, setPasswordInput] = useState('')
+  const [passwordError, setPasswordError] = useState('')
+
   // Derived
   const currentItems = getChildrenAtPath(root, navPath) ?? []
   const breadcrumbs = buildBreadcrumbs(root, navPath)
@@ -206,19 +213,32 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
     if (formMode === 'link' && !form.href.trim()) return
     const id = Date.now().toString()
     const newItem: TreeItem = formMode === 'folder'
-      ? { id, type: 'folder', name: form.name, description: form.description, children: [] }
+      ? { id, type: 'folder', name: form.name, description: form.description,
+          ...(form.password.trim() ? { password: form.password.trim() } : {}),
+          children: [] }
       : { id, type: 'link', name: form.name, description: form.description, href: form.href }
     onRootChange(treeAdd(root, navPath, newItem))
     setForm(EMPTY_FORM)
   }
 
   function handleEditStart(item: TreeItem) {
+    if (item.type === 'folder' && item.password) {
+      setPasswordModal({ action: 'edit', itemId: item.id })
+      setPasswordInput('')
+      setPasswordError('')
+      return
+    }
+    _doEditStart(item)
+  }
+
+  function _doEditStart(item: TreeItem) {
     setEditingId(item.id)
     setFormMode(item.type)
     setForm({
       name: item.name,
       description: item.description,
       href: item.type === 'link' ? item.href : '',
+      password: item.type === 'folder' ? (item.password ?? '') : '',
     })
   }
 
@@ -226,7 +246,8 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
     if (!editingId || !form.name.trim()) return
     const patch: Partial<TreeItem> = editingItem?.type === 'link'
       ? { name: form.name, description: form.description, href: form.href }
-      : { name: form.name, description: form.description }
+      : { name: form.name, description: form.description,
+          ...(form.password.trim() ? { password: form.password.trim() } : { password: undefined }) }
     onRootChange(treeUpdate(root, editingId, patch))
     setEditingId(null)
     setForm(EMPTY_FORM)
@@ -237,21 +258,61 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
     setForm(EMPTY_FORM)
   }
 
-  function handleDelete(id: string) {
+  function _doDelete(id: string) {
     onRootChange(treeDelete(root, id))
-    if (navPath.includes(id)) {
-      setNavPath(prev => prev.slice(0, prev.indexOf(id)))
-    }
-    if (editingId === id) {
-      setEditingId(null)
-      setForm(EMPTY_FORM)
-    }
+    if (navPath.includes(id)) setNavPath(prev => prev.slice(0, prev.indexOf(id)))
+    if (editingId === id) { setEditingId(null); setForm(EMPTY_FORM) }
   }
 
-  function handleEnterFolder(id: string) {
+  function handleDelete(id: string) {
+    const item = currentItems.find(i => i.id === id)
+    if (item?.type === 'folder' && item.password) {
+      setPasswordModal({ action: 'delete', itemId: id })
+      setPasswordInput('')
+      setPasswordError('')
+      return
+    }
+    _doDelete(id)
+  }
+
+  function _doEnterFolder(id: string) {
     setNavPath(prev => [...prev, id])
     setEditingId(null)
     setForm(EMPTY_FORM)
+  }
+
+  function handleEnterFolder(id: string) {
+    const item = currentItems.find(i => i.id === id)
+    if (item?.type === 'folder' && item.password) {
+      setPasswordModal({ action: 'enter', itemId: id })
+      setPasswordInput('')
+      setPasswordError('')
+      return
+    }
+    _doEnterFolder(id)
+  }
+
+  function handlePasswordConfirm() {
+    if (!passwordModal) return
+    const item = currentItems.find(i => i.id === passwordModal.itemId)
+    if (!item || item.type !== 'folder') return
+    if (passwordInput !== item.password) {
+      setPasswordError('密碼錯誤，請重試')
+      return
+    }
+    const { action, itemId } = passwordModal
+    setPasswordModal(null)
+    setPasswordInput('')
+    setPasswordError('')
+    if (action === 'enter') _doEnterFolder(itemId)
+    else if (action === 'edit') _doEditStart(item)
+    else if (action === 'delete') _doDelete(itemId)
+  }
+
+  function handlePasswordCancel() {
+    setPasswordModal(null)
+    setPasswordInput('')
+    setPasswordError('')
   }
 
   function handleBreadcrumbNavigate(index: number) {
@@ -260,28 +321,43 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
     setForm(EMPTY_FORM)
   }
 
-  function handleExport() {
-    const blob = new Blob([JSON.stringify(root, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'links.json'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   /* ── Render ── */
 
   return (
     <div className={`link-root${isDark ? '' : ' light'}`}>
 
+      {/* Password Modal */}
+      {passwordModal && (
+        <div className="lk-overlay" onClick={handlePasswordCancel}>
+          <div className="lk-dialog" onClick={e => e.stopPropagation()}>
+            <h3 className="lk-dialog-title">
+              {passwordModal.action === 'enter' && '請輸入資料夾密碼'}
+              {passwordModal.action === 'edit'  && '請輸入密碼以編輯'}
+              {passwordModal.action === 'delete' && '請輸入密碼以刪除'}
+            </h3>
+            <input
+              className="form-input"
+              type="password"
+              autoFocus
+              value={passwordInput}
+              maxLength={32}
+              onChange={e => { setPasswordInput(e.target.value); setPasswordError('') }}
+              onKeyDown={e => e.key === 'Enter' && handlePasswordConfirm()}
+              placeholder="輸入密碼"
+            />
+            {passwordError && <p className="lk-dialog-error">{passwordError}</p>}
+            <div className="lk-dialog-actions">
+              <button className="btn-primary" onClick={handlePasswordConfirm}>確認</button>
+              <button className="btn-secondary" onClick={handlePasswordCancel}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Top Controls */}
       <div className="link-top-controls">
         <button className="lk-icon-btn lk-back" onClick={onBack} aria-label="返回首頁">
           <HomeIcon />
-        </button>
-        <button className="lk-icon-btn" onClick={handleExport} aria-label="匯出 links.json">
-          <DownloadIcon />
         </button>
         <button
           className="lk-icon-btn"
@@ -298,7 +374,7 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
         <main className="link-main">
           <header className="link-header">
             <p className="link-eyebrow">File Center</p>
-            <h1 className="link-title">連結<em>管理</em></h1>
+            <h1 className="link-title">頁面<em>連結</em></h1>
             <div className="link-divider" />
             <p className="link-subtitle">點擊卡片前往連結，或點擊資料夾進入子目錄</p>
           </header>
@@ -344,7 +420,10 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
                   onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && handleEnterFolder(item.id)}
                 >
                   <span className="lk-card-index">{String(i + 1).padStart(2, '0')}</span>
-                  <div className="lk-card-folder-icon"><FolderIcon /></div>
+                  <div className="lk-card-folder-icon">
+                    <FolderIcon />
+                    {item.password && <span className="lk-card-lock"><LockIcon /></span>}
+                  </div>
                   <div className="lk-card-name">{item.name}</div>
                   <p className="lk-card-desc">{item.description}</p>
                   <div className="lk-card-footer">
@@ -432,6 +511,20 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
                 rows={3}
               />
             </div>
+
+            {(formMode === 'folder' || editingItem?.type === 'folder') && (
+              <div className="form-group">
+                <label className="form-label">密碼（選填，最多 32 字元）</label>
+                <input
+                  className="form-input"
+                  type="password"
+                  value={form.password}
+                  maxLength={32}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  placeholder="留空表示不設密碼"
+                />
+              </div>
+            )}
 
             <div className="form-actions">
               {editingId ? (

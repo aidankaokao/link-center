@@ -632,6 +632,8 @@
 }
 
 .lk-card-folder-icon {
+  position: relative;
+  display: inline-block;
   margin-bottom: 10px;
   color: var(--gold-dim);
   transition: color 0.3s ease;
@@ -640,6 +642,23 @@
 .lk-card-folder-icon svg {
   width: 26px;
   height: 26px;
+}
+
+.lk-card-lock {
+  position: absolute;
+  bottom: -2px;
+  right: -8px;
+  width: 13px;
+  height: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+}
+
+.lk-card-lock svg {
+  width: 13px;
+  height: 13px;
 }
 
 .lk-card--folder:hover .lk-card-folder-icon {
@@ -692,6 +711,49 @@
 .sidebar-item-type svg {
   width: 12px;
   height: 12px;
+}
+
+/* ── Password Modal ── */
+.lk-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.lk-dialog {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.lk-dialog-title {
+  font-size: .95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0;
+}
+
+.lk-dialog-error {
+  color: var(--danger);
+  font-size: .8rem;
+  margin: 0;
+}
+
+.lk-dialog-actions {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+  margin-top: .25rem;
 }
 
 /* ── Keyframes ── */

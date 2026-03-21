@@ -73,7 +73,7 @@ export default function Home() {
           onClick={() => navigate('/link')}
         >
           <span className="card-index">01</span>
-          <div className="card-name">管理連結</div>
+          <div className="card-name">頁面連結</div>
           <p className="card-desc">新增、編輯或刪除自訂連結，打造專屬的快速導覽頁。</p>
           <div className="card-footer">
             <span className="card-arrow">→</span>
