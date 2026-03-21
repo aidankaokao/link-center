@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Page } from './App'
+import { useNavigate } from 'react-router-dom'
 import './Home.css'
 
 interface NavItem {
@@ -7,7 +7,7 @@ interface NavItem {
   name: string
   description: string
   href?: string
-  page?: Page
+  page?: string
   disabled?: boolean
 }
 
@@ -17,12 +17,6 @@ const NAV_ITEMS: NavItem[] = [
     name: 'LLM 問答',
     description: '串接 OpenAI API，進行智慧問答對話，支援多輪上下文。',
     page: 'chat',
-  },
-  {
-    index: '03',
-    name: '文字轉語音',
-    description: '使用本地 AI 模型將中文文字轉為語音，支援多種聲線，完全離線運行。',
-    page: 'tts',
   },
 ]
 
@@ -50,11 +44,8 @@ function MoonIcon() {
   )
 }
 
-interface Props {
-  onNavigate: (page: Page) => void
-}
-
-export default function Home({ onNavigate }: Props) {
+export default function Home() {
+  const navigate = useNavigate()
   const [isDark, setIsDark] = useState(false)
 
   return (
@@ -79,7 +70,7 @@ export default function Home({ onNavigate }: Props) {
       <nav className="home-grid">
         <button
           className="nav-card nav-card--active"
-          onClick={() => onNavigate('link')}
+          onClick={() => navigate('/link')}
         >
           <span className="card-index">01</span>
           <div className="card-name">管理連結</div>
@@ -100,7 +91,7 @@ export default function Home({ onNavigate }: Props) {
               </div>
             </div>
           ) : item.page ? (
-            <button key={item.index} className="nav-card nav-card--active" onClick={() => onNavigate(item.page!)}>
+            <button key={item.index} className="nav-card nav-card--active" onClick={() => navigate(`/${item.page!}`)}>
               <span className="card-index">{item.index}</span>
               <div className="card-name">{item.name}</div>
               <p className="card-desc">{item.description}</p>

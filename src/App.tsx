@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import Home from './Home'
 import Link, { type TreeItem } from './Link'
 import Chat from './Chat'
 import Tts from './Tts'
 
-export type Page = 'home' | 'link' | 'chat' | 'tts'
-
-function App() {
-  const [page, setPage] = useState<Page>('home')
+function AppRoutes() {
+  const navigate = useNavigate()
   const [root, setRoot] = useState<TreeItem[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -30,16 +29,22 @@ function App() {
 
   if (!loaded) return null
 
-  if (page === 'link') return (
-    <Link root={root} onRootChange={handleRootChange} onBack={() => setPage('home')} />
+  const goHome = () => navigate('/')
+
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/link" element={<Link root={root} onRootChange={handleRootChange} onBack={goHome} />} />
+      <Route path="/chat" element={<Chat onBack={goHome} />} />
+      <Route path="/tts" element={<Tts onBack={goHome} />} />
+    </Routes>
   )
-  if (page === 'chat') return (
-    <Chat onBack={() => setPage('home')} />
-  )
-  if (page === 'tts') return (
-    <Tts onBack={() => setPage('home')} />
-  )
-  return <Home onNavigate={setPage} />
 }
 
-export default App
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  )
+}
