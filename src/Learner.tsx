@@ -31,7 +31,7 @@ interface Section {
   practice?: Practice
 }
 
-interface TopicMeta { id: string; name: string; description: string }
+interface TopicMeta { id: string; name: string; description: string; category?: string }
 interface Topic extends TopicMeta {
   levels: { beginner?: Section[]; intermediate?: Section[]; advanced?: Section[] }
 }
@@ -193,6 +193,18 @@ function escRegex(s: string) {
 
 interface ChatMsg { id: string; role: 'user' | 'assistant'; content: string }
 
+type LlmProvider = 'openai' | 'gemini' | 'ollama'
+interface LlmConfig {
+  openai: { apiKey: string }
+  gemini: { apiKey: string }
+  ollama: { url: string; model: string }
+}
+const LLM_INIT: LlmConfig = {
+  openai: { apiKey: '' },
+  gemini: { apiKey: '' },
+  ollama: { url: 'http://localhost:11434', model: 'llama3' },
+}
+
 interface Props { onBack: () => void }
 
 export default function Learner({ onBack }: Props) {
@@ -217,14 +229,27 @@ export default function Learner({ onBack }: Props) {
   const [deleteModal, setDeleteModal] = useState<{ id: string; name: string } | null>(null)
   const [deleteInput, setDeleteInput] = useState('')
 
-  // LLM 設定（跨主題保留）
-  const [llmApiKey, setLlmApiKey] = useState('')
+  // 分類管理
+  const [categories, setCategories] = useState<string[]>(['未分類'])
+  const [collapsedCats, setCollapsedCats] = useState<Set<string>>(new Set())
+  const [importCategory, setImportCategory] = useState<string>('未分類')
+  const [catInput, setCatInput] = useState('')
+  const [catError, setCatError] = useState('')
+  const [deleteCatModal, setDeleteCatModal] = useState<{ name: string } | null>(null)
+  const [deleteCatInput, setDeleteCatInput] = useState('')
+  const [deleteCatError, setDeleteCatError] = useState('')
+
+  // LLM 設定（跨主題保留，各服務商獨立）
+  const [llmProvider, setLlmProvider] = useState<LlmProvider>('openai')
+  const [llmSaved, setLlmSaved] = useState<LlmConfig>({ ...LLM_INIT, openai: { apiKey: '' }, gemini: { apiKey: '' }, ollama: { url: 'http://localhost:11434', model: 'llama3' } })
+  const [llmDraft, setLlmDraft] = useState<LlmConfig>({ ...LLM_INIT, openai: { apiKey: '' }, gemini: { apiKey: '' }, ollama: { url: 'http://localhost:11434', model: 'llama3' } })
   const [llmTemperature, setLlmTemperature] = useState(0.7)
-  const [llmApiKeyInput, setLlmApiKeyInput] = useState('')
+  const [ollamaStatus, setOllamaStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
 
   // 聊天面板
   const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState<ChatMsg[]>([])
+  const [convProvider, setConvProvider] = useState<LlmProvider | null>(null)
   const [chatInput, setChatInput] = useState('')
   const [chatLoading, setChatLoading] = useState(false)
   const [chatError, setChatError] = useState('')
@@ -234,9 +259,10 @@ export default function Learner({ onBack }: Props) {
   const contentRef = useRef<HTMLDivElement>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  /* ── Load topics list ── */
+  /* ── Load topics list + categories ── */
   useEffect(() => {
     fetch('/api/learner').then(r => r.json()).then(setTopics).catch(() => {})
+    fetch('/api/learner/categories').then(r => r.json()).then(setCategories).catch(() => {})
   }, [])
 
   /* ── Load topic detail ── */
@@ -298,6 +324,7 @@ export default function Learner({ onBack }: Props) {
     if (!activeTopic) return
     if (chatTopicId !== activeTopic.id) {
       setChatMessages([])
+      setConvProvider(null)
       setChatInput('')
       setChatError('')
       setChatTopicId(activeTopic.id)
@@ -363,10 +390,11 @@ export default function Learner({ onBack }: Props) {
       setPasteError('缺少必要欄位：id、name、levels。')
       return
     }
+    d.category = importCategory
     fetch('/api/learner', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: pasteJson,
+      body: JSON.stringify(d),
     })
       .then(r => r.json())
       .then(res => {
@@ -377,6 +405,74 @@ export default function Learner({ onBack }: Props) {
         setTimeout(() => setPasteSuccess(false), 3000)
       })
       .catch(() => setPasteError('伺服器錯誤，請稍後再試。'))
+  }
+
+  /* ── Category management ── */
+  function toggleCat(cat: string) {
+    setCollapsedCats(prev => {
+      const next = new Set(prev)
+      next.has(cat) ? next.delete(cat) : next.add(cat)
+      return next
+    })
+  }
+
+  function handleCreateCategory() {
+    const name = catInput.trim()
+    if (!name || name === '未分類') { setCatError('名稱無效'); return }
+    if (categories.includes(name)) { setCatError('分類已存在'); return }
+    fetch('/api/learner/categories', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    })
+      .then(r => r.json())
+      .then(res => {
+        if (res.error) { setCatError(res.error); return }
+        setCategories(prev => [...prev, name])
+        setCatInput('')
+        setCatError('')
+      })
+      .catch(() => setCatError('伺服器錯誤'))
+  }
+
+  function handleDeleteCategory() {
+    if (!deleteCatModal || deleteCatInput !== 'DELETE') return
+    const { name } = deleteCatModal
+    fetch(`/api/learner/categories/${encodeURIComponent(name)}`, { method: 'DELETE' })
+      .then(r => r.json())
+      .then(res => {
+        if (res.error === 'category-not-empty') {
+          setDeleteCatError('此分類仍有主題，請先移動所有主題再刪除。')
+          return
+        }
+        if (res.error) { setDeleteCatError(res.error); return }
+        setCategories(prev => prev.filter(c => c !== name))
+        if (importCategory === name) setImportCategory('未分類')
+        setDeleteCatModal(null)
+        setDeleteCatInput('')
+        setDeleteCatError('')
+      })
+      .catch(() => setDeleteCatError('伺服器錯誤'))
+  }
+
+  function handleMoveTopicCategory(topicId: string, newCategory: string) {
+    fetch(`/api/learner/${topicId}`)
+      .then(r => r.json())
+      .then(data => {
+        data.category = newCategory
+        return fetch('/api/learner', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok) {
+          setTopics(prev => prev.map(t => t.id === topicId ? { ...t, category: newCategory } : t))
+        }
+      })
+      .catch(() => {})
   }
 
   /* ── Delete topic ── */
@@ -561,9 +657,47 @@ ${levelsHtml}
     setDeleteInput('')
   }
 
+  /* ── LLM helpers ── */
+  function isLlmConfigured() {
+    if (llmProvider === 'openai') return !!llmSaved.openai.apiKey
+    if (llmProvider === 'gemini') return !!llmSaved.gemini.apiKey
+    return !!(llmSaved.ollama.url && llmSaved.ollama.model)
+  }
+
+  function handleSaveLlm() {
+    setLlmSaved(prev => ({ ...prev, [llmProvider]: { ...llmDraft[llmProvider] } }))
+    if (llmProvider === 'ollama') {
+      // test uses draft values directly since save hasn't flushed yet
+      setOllamaStatus('checking')
+      fetch(`${llmDraft.ollama.url}/api/version`, { signal: AbortSignal.timeout(5000) })
+        .then(r => setOllamaStatus(r.ok ? 'ok' : 'error'))
+        .catch(() => setOllamaStatus('error'))
+    }
+  }
+
+  function handleClearLlm() {
+    const empty = llmProvider === 'ollama'
+      ? { url: 'http://localhost:11434', model: 'llama3' } as { url: string; model: string }
+      : { apiKey: '' } as { apiKey: string }
+    setLlmSaved(prev => ({ ...prev, [llmProvider]: empty }))
+    setLlmDraft(prev => ({ ...prev, [llmProvider]: empty }))
+    if (llmProvider === 'ollama') setOllamaStatus('idle')
+  }
+
+  async function handleTestOllama() {
+    setOllamaStatus('checking')
+    try {
+      const res = await fetch(`${llmDraft.ollama.url}/api/version`, { signal: AbortSignal.timeout(5000) })
+      setOllamaStatus(res.ok ? 'ok' : 'error')
+    } catch {
+      setOllamaStatus('error')
+    }
+  }
+
   /* ── LLM Chat Submit ── */
   async function handleChatSubmit() {
     if (!chatInput.trim() || !activeTopic || chatLoading) return
+    if (convProvider === null) setConvProvider(llmProvider)
     const trimmed = chatInput.trim()
 
     setChatError('')
@@ -575,41 +709,80 @@ ${levelsHtml}
     const systemPrompt = `你是一個學習助手，請根據以下主題資料回答問題。主題名稱：${activeTopic.name}\n主題說明：${activeTopic.description}\n\n完整主題資料（JSON）：\n${JSON.stringify(activeTopic, null, 2)}`
     const assistantId = (Date.now() + 1).toString()
     setChatMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
+    const allMessages = [...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content }))
 
     try {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${llmApiKey}` },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          stream: true,
-          temperature: llmTemperature,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...[...chatMessages, userMsg].map(m => ({ role: m.role, content: m.content })),
-          ],
-        }),
-      })
-      if (!res.ok) throw new Error(`API 錯誤：HTTP ${res.status}`)
-      const reader = res.body!.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') break
-          try {
-            const delta = JSON.parse(data).choices?.[0]?.delta?.content ?? ''
-            if (delta) setChatMessages(prev => prev.map(m =>
-              m.id === assistantId ? { ...m, content: m.content + delta } : m
-            ))
-          } catch { /* ignore parse errors */ }
+      if (llmProvider === 'openai' || llmProvider === 'gemini') {
+        const endpoint = llmProvider === 'openai'
+          ? 'https://api.openai.com/v1/chat/completions'
+          : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        const model = llmProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash'
+        const apiKey = llmProvider === 'openai' ? llmSaved.openai.apiKey : llmSaved.gemini.apiKey
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            stream: true,
+            temperature: llmTemperature,
+            messages: [{ role: 'system', content: systemPrompt }, ...allMessages],
+          }),
+        })
+        if (!res.ok) throw new Error(`API 錯誤：HTTP ${res.status}`)
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') break
+            try {
+              const delta = JSON.parse(data).choices?.[0]?.delta?.content ?? ''
+              if (delta) setChatMessages(prev => prev.map(m =>
+                m.id === assistantId ? { ...m, content: m.content + delta } : m
+              ))
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      } else {
+        // Ollama — NDJSON streaming
+        const res = await fetch(`${llmSaved.ollama.url}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: llmSaved.ollama.model,
+            stream: true,
+            options: { temperature: llmTemperature },
+            messages: [{ role: 'system', content: systemPrompt }, ...allMessages],
+          }),
+        })
+        if (!res.ok) throw new Error(`Ollama 錯誤：HTTP ${res.status}`)
+        const reader = res.body!.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const obj = JSON.parse(line)
+              const delta = obj.message?.content ?? ''
+              if (delta) setChatMessages(prev => prev.map(m =>
+                m.id === assistantId ? { ...m, content: m.content + delta } : m
+              ))
+            } catch { /* ignore parse errors */ }
+          }
         }
       }
     } catch (e: unknown) {
@@ -652,15 +825,40 @@ ${levelsHtml}
             尚無主題
           </p>
         )}
-        {topics.map(t => (
-          <button
-            key={t.id}
-            className={`lr-topic-btn${activeTopic?.id === t.id ? ' lr-topic-btn--active' : ''}`}
-            onClick={() => handleSelectTopic(t.id)}
-          >
-            {t.name}
-          </button>
-        ))}
+        {categories.map(cat => {
+          const catTopics = topics.filter(t => (t.category ?? '未分類') === cat)
+          // Also catch topics whose category is unknown (not in categories list)
+          const extraTopics = cat === '未分類'
+            ? topics.filter(t => !categories.includes(t.category ?? '未分類') && t.category !== undefined && t.category !== '未分類')
+            : []
+          const allTopics = [...catTopics, ...extraTopics]
+          if (allTopics.length === 0) return null
+          return (
+            <div key={cat} className="lr-category-group">
+              {categories.length > 1 && (
+                <button className="lr-category-heading" onClick={() => toggleCat(cat)}>
+                  <span>{cat}</span>
+                  <span className={`lr-category-chevron${collapsedCats.has(cat) ? ' collapsed' : ''}`}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </span>
+                </button>
+              )}
+              <div className={`lr-category-topics${collapsedCats.has(cat) ? ' lr-category-topics--collapsed' : ''}`}>
+                {allTopics.map(t => (
+                  <button
+                    key={t.id}
+                    className={`lr-topic-btn${activeTopic?.id === t.id ? ' lr-topic-btn--active' : ''}`}
+                    onClick={() => handleSelectTopic(t.id)}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </aside>
 
       {/* Main */}
@@ -876,6 +1074,41 @@ ${levelsHtml}
         </div>
       )}
 
+      {/* Delete Category Modal */}
+      {deleteCatModal && (
+        <div className="lr-delete-backdrop" onClick={() => { setDeleteCatModal(null); setDeleteCatInput(''); setDeleteCatError('') }}>
+          <div className="lr-delete-dialog" onClick={e => e.stopPropagation()}>
+            <p className="lr-delete-dialog-title">刪除分類</p>
+            <p className="lr-delete-dialog-desc">
+              即將永久刪除分類「<strong>{deleteCatModal.name}</strong>」，此操作無法復原。
+            </p>
+            <p className="lr-delete-dialog-instruction">
+              請輸入 <code>DELETE</code> 以確認：
+            </p>
+            <input
+              className="lr-delete-dialog-input"
+              placeholder="DELETE"
+              value={deleteCatInput}
+              onChange={e => setDeleteCatInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleDeleteCategory() }}
+              autoFocus
+            />
+            {deleteCatError && <p style={{ color: 'var(--danger)', fontSize: '12px', marginTop: '8px' }}>{deleteCatError}</p>}
+            <div className="lr-delete-dialog-actions">
+              <button
+                className="lr-delete-dialog-cancel"
+                onClick={() => { setDeleteCatModal(null); setDeleteCatInput(''); setDeleteCatError('') }}
+              >取消</button>
+              <button
+                className="lr-delete-dialog-confirm"
+                onClick={handleDeleteCategory}
+                disabled={deleteCatInput !== 'DELETE'}
+              >確認刪除</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Chat Button */}
       {activeTopic && (
         <button
@@ -897,6 +1130,9 @@ ${levelsHtml}
         <div className="lr-chat-panel" onClick={e => e.stopPropagation()}>
           <div className="lr-chat-header">
             <span className="lr-chat-title">{activeTopic.name}</span>
+            <span className="lr-chat-provider-badge">
+              {(convProvider ?? llmProvider) === 'openai' ? 'OpenAI' : (convProvider ?? llmProvider) === 'gemini' ? 'Gemini' : 'Ollama'}
+            </span>
             <div style={{ display: 'flex', gap: '6px' }}>
               {chatMessages.length > 0 && (
                 <button className="lr-chat-close" onClick={handlePrintChat} title="列印 / 儲存為 PDF">
@@ -910,9 +1146,11 @@ ${levelsHtml}
               <button className="lr-chat-close" onClick={() => setChatOpen(false)}>✕</button>
             </div>
           </div>
-          {!llmApiKey ? (
+          {!isLlmConfigured() ? (
             <div className="lr-chat-no-key">
-              請先在管理面板（右上角 ⚙）設定 OpenAI API Key
+              {llmProvider === 'ollama'
+                ? '請先在管理面板（右上角 ⚙）設定 Ollama URL 與 Model'
+                : '請先在管理面板（右上角 ⚙）設定 API Key'}
             </div>
           ) : (
             <>
@@ -977,27 +1215,89 @@ ${levelsHtml}
             {/* LLM 設定 */}
             <div className="lr-admin-llm-section">
               <p className="lr-admin-section-title">LLM 設定</p>
-              <label className="lr-admin-label">OpenAI API Key</label>
-              <div className="lr-admin-key-row">
-                <input
-                  type="password"
-                  className="lr-admin-input"
-                  placeholder="sk-..."
-                  value={llmApiKeyInput}
-                  onChange={e => setLlmApiKeyInput(e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                />
-                <button className="lr-admin-save-btn" onClick={() => setLlmApiKey(llmApiKeyInput.trim())}>
-                  {llmApiKey ? '更新' : '儲存'}
-                </button>
-                {llmApiKey && (
-                  <button className="lr-admin-clear-btn" onClick={() => { setLlmApiKey(''); setLlmApiKeyInput('') }}>
-                    清除
+
+              {/* 服務商選擇 */}
+              <div className="lr-admin-provider-tabs">
+                {(['openai', 'gemini', 'ollama'] as LlmProvider[]).map(p => (
+                  <button
+                    key={p}
+                    className={`lr-admin-provider-tab${llmProvider === p ? ' active' : ''}`}
+                    onClick={() => setLlmProvider(p)}
+                  >
+                    {p === 'openai' ? 'OpenAI' : p === 'gemini' ? 'Gemini' : 'Ollama'}
                   </button>
-                )}
+                ))}
               </div>
-              {llmApiKey && <p className="lr-admin-key-hint">✓ 已設定（僅存於記憶體）</p>}
-              <label className="lr-admin-label">
+
+              {/* OpenAI / Gemini */}
+              {(llmProvider === 'openai' || llmProvider === 'gemini') && (
+                <>
+                  <label className="lr-admin-label">API Key</label>
+                  <div className="lr-admin-key-row">
+                    <input
+                      type="password"
+                      className="lr-admin-input"
+                      placeholder={llmProvider === 'openai' ? 'sk-...' : 'AIza...'}
+                      value={(llmDraft[llmProvider] as { apiKey: string }).apiKey}
+                      onChange={e => setLlmDraft(prev => ({ ...prev, [llmProvider]: { apiKey: e.target.value } }))}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <button className="lr-admin-save-btn" onClick={handleSaveLlm}>
+                      {(llmSaved[llmProvider] as { apiKey: string }).apiKey ? '更新' : '儲存'}
+                    </button>
+                    {(llmSaved[llmProvider] as { apiKey: string }).apiKey && (
+                      <button className="lr-admin-clear-btn" onClick={handleClearLlm}>清除</button>
+                    )}
+                  </div>
+                  {(llmSaved[llmProvider] as { apiKey: string }).apiKey && (
+                    <p className="lr-admin-key-hint">✓ 已設定（僅存於記憶體）</p>
+                  )}
+                </>
+              )}
+
+              {/* Ollama */}
+              {llmProvider === 'ollama' && (
+                <>
+                  <label className="lr-admin-label">Ollama URL</label>
+                  <input
+                    className="lr-admin-input"
+                    placeholder="http://localhost:11434"
+                    value={llmDraft.ollama.url}
+                    onChange={e => setLlmDraft(prev => ({ ...prev, ollama: { ...prev.ollama, url: e.target.value } }))}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <label className="lr-admin-label" style={{ marginTop: '8px' }}>Model</label>
+                  <input
+                    className="lr-admin-input"
+                    placeholder="llama3"
+                    value={llmDraft.ollama.model}
+                    onChange={e => setLlmDraft(prev => ({ ...prev, ollama: { ...prev.ollama, model: e.target.value } }))}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <div className="lr-admin-key-row" style={{ marginTop: '8px' }}>
+                    <button className="lr-admin-save-btn" onClick={handleSaveLlm}>儲存</button>
+                    <button
+                      className="lr-admin-save-btn"
+                      onClick={handleTestOllama}
+                      disabled={ollamaStatus === 'checking'}
+                      style={{ background: 'var(--input-bg)', color: 'var(--text)', border: '1px solid var(--border)' }}
+                    >
+                      {ollamaStatus === 'checking' ? '測試中...' : '測試連線'}
+                    </button>
+                    <button className="lr-admin-clear-btn" onClick={handleClearLlm}>清除</button>
+                  </div>
+                  {ollamaStatus === 'ok' && (
+                    <p className="lr-admin-key-hint">✓ 連線成功</p>
+                  )}
+                  {ollamaStatus === 'error' && (
+                    <p className="lr-admin-paste-error">
+                      ⚠ 無法連線，請確認 Ollama URL 是否正確，以及服務是否已啟動，並重新修改 LLM 設定。
+                    </p>
+                  )}
+                </>
+              )}
+
+              <label className="lr-admin-label" style={{ marginTop: '10px' }}>
                 Temperature <span className="lr-admin-temp-val">{llmTemperature.toFixed(1)}</span>
               </label>
               <input
@@ -1011,11 +1311,51 @@ ${levelsHtml}
               </div>
             </div>
 
+            {/* 分類管理 */}
+            <div>
+              <p className="lr-admin-section-title" style={{ marginBottom: '10px' }}>分類管理</p>
+              <div className="lr-admin-cat-row">
+                <input
+                  className="lr-admin-input"
+                  placeholder="新分類名稱"
+                  value={catInput}
+                  onChange={e => { setCatInput(e.target.value); setCatError('') }}
+                  onClick={e => e.stopPropagation()}
+                  onKeyDown={e => { if (e.key === 'Enter') handleCreateCategory() }}
+                />
+                <button className="lr-admin-save-btn" onClick={handleCreateCategory}>新增</button>
+              </div>
+              {catError && <p className="lr-admin-paste-error">{catError}</p>}
+              <div className="lr-admin-cat-list">
+                {categories.map(cat => (
+                  <div key={cat} className="lr-admin-cat-item">
+                    <span className="lr-admin-cat-name">{cat}</span>
+                    {cat !== '未分類' && (
+                      <button
+                        className="lr-admin-delete-btn"
+                        onClick={() => { setDeleteCatModal({ name: cat }); setDeleteCatInput(''); setDeleteCatError('') }}
+                        title={`刪除分類「${cat}」`}
+                      >×</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div>
               <p className="lr-admin-section-title" style={{ marginBottom: '10px' }}>貼上 JSON 匯入主題</p>
               <p className="lr-admin-hint" style={{ marginBottom: '10px' }}>
                 將 LLM 生成的 JSON 貼入下方，點擊「匯入」即可建立新主題。
               </p>
+              <label className="lr-admin-label">匯入至分類</label>
+              <select
+                className="lr-cat-select"
+                style={{ marginBottom: '10px', width: '100%' }}
+                value={importCategory}
+                onChange={e => setImportCategory(e.target.value)}
+              >
+                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
               <textarea
                 className="lr-admin-textarea"
                 placeholder={'{\n  "id": "my-topic",\n  "name": "主題名稱",\n  ...\n}'}
@@ -1069,6 +1409,14 @@ ${levelsHtml}
                   {topics.map(t => (
                     <div key={t.id} className="lr-admin-topic-row">
                       <span className="lr-admin-topic-name">{t.name}</span>
+                      <select
+                        className="lr-cat-select"
+                        value={t.category ?? '未分類'}
+                        onChange={e => handleMoveTopicCategory(t.id, e.target.value)}
+                        title="移動至分類"
+                      >
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
                       <button
                         className="lr-admin-download-btn"
                         onClick={() => handleDownloadTopic(t.id)}

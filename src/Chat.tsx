@@ -20,6 +20,18 @@ interface UploadedFile {
   mimeType?: string  // image only
 }
 
+type LlmProvider = 'openai' | 'gemini' | 'ollama'
+interface LlmConfig {
+  openai: { apiKey: string }
+  gemini: { apiKey: string }
+  ollama: { url: string; model: string }
+}
+const LLM_INIT: LlmConfig = {
+  openai: { apiKey: '' },
+  gemini: { apiKey: '' },
+  ollama: { url: 'http://localhost:11434', model: 'llama3' },
+}
+
 /* ─────────────────────────────────────────────
    CSV export helpers
    ───────────────────────────────────────────── */
@@ -126,6 +138,15 @@ function HomeIcon() {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z" />
       <polyline points="9 21 9 12 15 12 15 21" />
+    </svg>
+  )
+}
+function NewChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <line x1="12" y1="8" x2="12" y2="16" />
+      <line x1="8" y1="12" x2="16" y2="12" />
     </svg>
   )
 }
@@ -246,9 +267,12 @@ interface Props {
 export default function Chat({ onBack }: Props) {
   const [isDark, setIsDark] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [apiKeyInput, setApiKeyInput] = useState('')
-  const [savedApiKey, setSavedApiKey] = useState('')
+  const [llmProvider, setLlmProvider] = useState<LlmProvider>('openai')
+  const [llmSaved, setLlmSaved] = useState<LlmConfig>(LLM_INIT)
+  const [llmDraft, setLlmDraft] = useState<LlmConfig>(LLM_INIT)
+  const [ollamaStatus, setOllamaStatus] = useState<'idle' | 'checking' | 'ok' | 'error'>('idle')
   const [messages, setMessages] = useState<Message[]>([])
+  const [convProvider, setConvProvider] = useState<LlmProvider | null>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -259,7 +283,11 @@ export default function Chat({ onBack }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const hasApiKey = savedApiKey.trim().length > 0
+  function isLlmConfigured() {
+    if (llmProvider === 'openai') return !!llmSaved.openai.apiKey
+    if (llmProvider === 'gemini') return !!llmSaved.gemini.apiKey
+    return !!(llmSaved.ollama.url && llmSaved.ollama.model)
+  }
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -274,20 +302,49 @@ export default function Chat({ onBack }: Props) {
     el.style.height = Math.min(el.scrollHeight, 160) + 'px'
   }
 
-  function handleSaveKey() {
-    setSavedApiKey(apiKeyInput.trim())
+  function handleSaveLlm() {
+    setLlmSaved(prev => ({ ...prev, [llmProvider]: { ...llmDraft[llmProvider] } }))
+    setError(null)
+    if (llmProvider === 'ollama') {
+      setOllamaStatus('checking')
+      fetch(`${llmDraft.ollama.url}/api/version`, { signal: AbortSignal.timeout(5000) })
+        .then(r => setOllamaStatus(r.ok ? 'ok' : 'error'))
+        .catch(() => setOllamaStatus('error'))
+    }
+  }
+
+  function handleClearLlm() {
+    const empty = llmProvider === 'ollama'
+      ? { url: 'http://localhost:11434', model: 'llama3' } as { url: string; model: string }
+      : { apiKey: '' } as { apiKey: string }
+    setLlmSaved(prev => ({ ...prev, [llmProvider]: empty }))
+    setLlmDraft(prev => ({ ...prev, [llmProvider]: empty }))
+    if (llmProvider === 'ollama') setOllamaStatus('idle')
+    setMessages([])
+    setConvProvider(null)
     setError(null)
   }
 
-  function handleClearKey() {
-    setSavedApiKey('')
-    setApiKeyInput('')
+  function handleNewConversation() {
     setMessages([])
+    setConvProvider(null)
     setError(null)
+    setUploadedFile(null)
+  }
+
+  async function handleTestOllama() {
+    setOllamaStatus('checking')
+    try {
+      const res = await fetch(`${llmDraft.ollama.url}/api/version`, { signal: AbortSignal.timeout(5000) })
+      setOllamaStatus(res.ok ? 'ok' : 'error')
+    } catch {
+      setOllamaStatus('error')
+    }
   }
 
   async function handleSend() {
-    if (!hasApiKey || !input.trim() || loading) return
+    if (!isLlmConfigured() || !input.trim() || loading) return
+    if (convProvider === null) setConvProvider(llmProvider)
     setError(null)
 
     const userMsg: Message = {
@@ -308,70 +365,114 @@ export default function Chat({ onBack }: Props) {
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${savedApiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: (() => {
-            const arr: any[] = []
-            if (uploadedFile?.type === 'pdf') {
-              arr.push({
-                role: 'system',
-                content: `以下是使用者上傳的文件「${uploadedFile.name}」，請根據此文件內容回答問題：\n\n${uploadedFile.content}`,
-              })
-            }
-            updatedMessages.forEach((m, i) => {
-              const isLastUser = i === updatedMessages.length - 1 && m.role === 'user'
-              if (isLastUser && uploadedFile?.type === 'image') {
-                arr.push({
-                  role: 'user',
-                  content: [
-                    { type: 'text', text: m.content },
-                    { type: 'image_url', image_url: { url: `data:${uploadedFile.mimeType};base64,${uploadedFile.content}` } },
-                  ],
-                })
-              } else {
-                arr.push({ role: m.role, content: m.content })
-              }
+      if (llmProvider === 'openai' || llmProvider === 'gemini') {
+        const endpoint = llmProvider === 'openai'
+          ? 'https://api.openai.com/v1/chat/completions'
+          : 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions'
+        const model = llmProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash'
+        const apiKey = llmProvider === 'openai' ? llmSaved.openai.apiKey : llmSaved.gemini.apiKey
+
+        const builtMessages: any[] = []
+        if (uploadedFile?.type === 'pdf') {
+          builtMessages.push({
+            role: 'system',
+            content: `以下是使用者上傳的文件「${uploadedFile.name}」，請根據此文件內容回答問題：\n\n${uploadedFile.content}`,
+          })
+        }
+        updatedMessages.forEach((m, i) => {
+          const isLastUser = i === updatedMessages.length - 1 && m.role === 'user'
+          if (isLastUser && uploadedFile?.type === 'image') {
+            builtMessages.push({
+              role: 'user',
+              content: [
+                { type: 'text', text: m.content },
+                { type: 'image_url', image_url: { url: `data:${uploadedFile.mimeType};base64,${uploadedFile.content}` } },
+              ],
             })
-            return arr
-          })(),
-          stream: true,
-        }),
-      })
+          } else {
+            builtMessages.push({ role: m.role, content: m.content })
+          }
+        })
 
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}))
-        throw new Error(errData?.error?.message ?? `HTTP ${response.status}`)
-      }
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model, messages: builtMessages, stream: true }),
+        })
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}))
+          throw new Error(errData?.error?.message ?? `HTTP ${response.status}`)
+        }
+        const reader = response.body!.getReader()
+        const decoder = new TextDecoder()
+        let accumulated = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunk = decoder.decode(value, { stream: true })
+          const lines = chunk.split('\n')
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') break
+            try {
+              const parsed = JSON.parse(data)
+              const delta = parsed.choices?.[0]?.delta?.content ?? ''
+              accumulated += delta
+              setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulated } : m))
+            } catch { /* skip malformed chunks */ }
+          }
+        }
+      } else {
+        // Ollama — NDJSON streaming
+        const ollamaMessages: any[] = []
+        if (uploadedFile?.type === 'pdf') {
+          ollamaMessages.push({
+            role: 'system',
+            content: `以下是使用者上傳的文件「${uploadedFile.name}」，請根據此文件內容回答問題：\n\n${uploadedFile.content}`,
+          })
+        }
+        updatedMessages.forEach((m, i) => {
+          const isLastUser = i === updatedMessages.length - 1 && m.role === 'user'
+          if (isLastUser && uploadedFile?.type === 'image') {
+            ollamaMessages.push({ role: 'user', content: m.content, images: [uploadedFile.content] })
+          } else {
+            ollamaMessages.push({ role: m.role, content: m.content })
+          }
+        })
 
-      const reader = response.body!.getReader()
-      const decoder = new TextDecoder()
-      let accumulated = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = decoder.decode(value, { stream: true })
-        const lines = chunk.split('\n')
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const data = line.slice(6).trim()
-          if (data === '[DONE]') break
-          try {
-            const parsed = JSON.parse(data)
-            const delta = parsed.choices?.[0]?.delta?.content ?? ''
-            accumulated += delta
-            setMessages(prev =>
-              prev.map(m => m.id === assistantId ? { ...m, content: accumulated } : m)
-            )
-          } catch { /* skip malformed chunks */ }
+        const response = await fetch(`${llmSaved.ollama.url}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: llmSaved.ollama.model,
+            messages: ollamaMessages,
+            stream: true,
+            options: { temperature: 0.7 },
+          }),
+        })
+        if (!response.ok) throw new Error(`Ollama 錯誤：HTTP ${response.status}`)
+        const reader = response.body!.getReader()
+        const decoder = new TextDecoder()
+        let accumulated = ''
+        let buffer = ''
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() ?? ''
+          for (const line of lines) {
+            if (!line.trim()) continue
+            try {
+              const obj = JSON.parse(line)
+              const delta = obj.message?.content ?? ''
+              if (delta) {
+                accumulated += delta
+                setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulated } : m))
+              }
+            } catch { /* ignore */ }
+          }
         }
       }
     } catch (err) {
@@ -441,44 +542,94 @@ export default function Chat({ onBack }: Props) {
 
         {sidebarOpen && (
           <div className="sidebar-body">
-            <div className="sidebar-section-label">
-              <KeyIcon />
-              <span>OpenAI API Key</span>
-            </div>
-
-            <input
-              className="sidebar-input"
-              type="password"
-              value={apiKeyInput}
-              onChange={e => setApiKeyInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSaveKey()}
-              placeholder="sk-..."
-              autoComplete="off"
-            />
-
-            <div className="sidebar-key-actions">
-              <button
-                className="sidebar-btn sidebar-btn--primary"
-                onClick={handleSaveKey}
-                disabled={!apiKeyInput.trim()}
-              >
-                儲存
-              </button>
-              {savedApiKey && (
-                <button className="sidebar-btn sidebar-btn--danger" onClick={handleClearKey}>
-                  清除
+            {/* 服務商 tabs */}
+            <div className="chat-provider-tabs">
+              {(['openai', 'gemini', 'ollama'] as LlmProvider[]).map(p => (
+                <button
+                  key={p}
+                  className={`chat-provider-tab${llmProvider === p ? ' active' : ''}`}
+                  onClick={() => setLlmProvider(p)}
+                >
+                  {p === 'openai' ? 'OpenAI' : p === 'gemini' ? 'Gemini' : 'Ollama'}
                 </button>
-              )}
+              ))}
             </div>
 
-            <div className={`sidebar-key-status${hasApiKey ? ' sidebar-key-status--ok' : ''}`}>
-              <span className="status-dot" />
-              <span>{hasApiKey ? 'API Key 已設定' : '尚未設定 API Key'}</span>
-            </div>
+            {/* OpenAI / Gemini */}
+            {(llmProvider === 'openai' || llmProvider === 'gemini') && (
+              <>
+                <div className="sidebar-section-label">
+                  <KeyIcon />
+                  <span>API Key</span>
+                </div>
+                <input
+                  className="sidebar-input"
+                  type="password"
+                  value={(llmDraft[llmProvider] as { apiKey: string }).apiKey}
+                  onChange={e => setLlmDraft(prev => ({ ...prev, [llmProvider]: { apiKey: e.target.value } }))}
+                  onKeyDown={e => e.key === 'Enter' && handleSaveLlm()}
+                  placeholder={llmProvider === 'openai' ? 'sk-...' : 'AIza...'}
+                  autoComplete="off"
+                />
+                <div className="sidebar-key-actions">
+                  <button
+                    className="sidebar-btn sidebar-btn--primary"
+                    onClick={handleSaveLlm}
+                    disabled={!(llmDraft[llmProvider] as { apiKey: string }).apiKey.trim()}
+                  >儲存</button>
+                  {(llmSaved[llmProvider] as { apiKey: string }).apiKey && (
+                    <button className="sidebar-btn sidebar-btn--danger" onClick={handleClearLlm}>清除</button>
+                  )}
+                </div>
+                <div className={`sidebar-key-status${isLlmConfigured() ? ' sidebar-key-status--ok' : ''}`}>
+                  <span className="status-dot" />
+                  <span>{isLlmConfigured() ? 'API Key 已設定' : '尚未設定 API Key'}</span>
+                </div>
+                <p className="sidebar-hint">Key 僅存於記憶體，關閉頁面後自動清除。</p>
+              </>
+            )}
 
-            <p className="sidebar-hint">
-              Key 僅存於記憶體，關閉頁面後自動清除。
-            </p>
+            {/* Ollama */}
+            {llmProvider === 'ollama' && (
+              <>
+                <div className="sidebar-section-label"><span>URL</span></div>
+                <input
+                  className="sidebar-input"
+                  value={llmDraft.ollama.url}
+                  onChange={e => setLlmDraft(prev => ({ ...prev, ollama: { ...prev.ollama, url: e.target.value } }))}
+                  placeholder="http://localhost:11434"
+                />
+                <div className="sidebar-section-label" style={{ marginTop: '8px' }}><span>Model</span></div>
+                <input
+                  className="sidebar-input"
+                  value={llmDraft.ollama.model}
+                  onChange={e => setLlmDraft(prev => ({ ...prev, ollama: { ...prev.ollama, model: e.target.value } }))}
+                  placeholder="llama3"
+                />
+                <div className="sidebar-key-actions">
+                  <button className="sidebar-btn sidebar-btn--primary" onClick={handleSaveLlm}>儲存</button>
+                  <button
+                    className="sidebar-btn"
+                    onClick={handleTestOllama}
+                    disabled={ollamaStatus === 'checking'}
+                    style={{ border: '1px solid var(--border)' }}
+                  >
+                    {ollamaStatus === 'checking' ? '測試中...' : '測試連線'}
+                  </button>
+                </div>
+                {ollamaStatus === 'ok' && (
+                  <div className="sidebar-key-status sidebar-key-status--ok">
+                    <span className="status-dot" /><span>連線成功</span>
+                  </div>
+                )}
+                {ollamaStatus === 'error' && (
+                  <p className="sidebar-hint" style={{ color: 'var(--danger)' }}>
+                    ⚠ 無法連線，請確認 URL 是否正確，以及 Ollama 服務是否已啟動，並重新修改 LLM 設定。
+                  </p>
+                )}
+                <p className="sidebar-hint">設定僅存於記憶體，關閉頁面後自動清除。</p>
+              </>
+            )}
           </div>
         )}
       </aside>
@@ -491,8 +642,15 @@ export default function Chat({ onBack }: Props) {
           <div className="chat-topbar-title">
             <BotIcon />
             <span>AI 問答</span>
+            <span className="chat-provider-badge">
+              {(convProvider ?? llmProvider) === 'openai' ? 'OpenAI' : (convProvider ?? llmProvider) === 'gemini' ? 'Gemini' : 'Ollama'}
+            </span>
           </div>
           <div className="chat-topbar-actions">
+            <button className="chat-ctrl-btn" onClick={handleNewConversation}
+              aria-label="新對話" title="新對話">
+              <NewChatIcon />
+            </button>
             <button className="chat-ctrl-btn" onClick={() => setIsDark(!isDark)}
               aria-label={isDark ? '切換亮色' : '切換深色'}>
               {isDark ? <SunIcon /> : <MoonIcon />}
@@ -507,14 +665,17 @@ export default function Chat({ onBack }: Props) {
         <div className="chat-messages">
           {messages.length === 0 && (
             <div className="chat-empty">
-              {hasApiKey
+              {isLlmConfigured()
                 ? <>
                     <BotIcon />
                     <p>你好！有什麼我可以幫你的嗎？</p>
                   </>
                 : <>
                     <KeyIcon />
-                    <p>請先在左側側邊欄輸入 OpenAI API Key 以開始對話。</p>
+                    <p>{llmProvider === 'ollama'
+                      ? '請先在左側側邊欄設定 Ollama URL 與 Model 以開始對話。'
+                      : '請先在左側側邊欄設定 API Key 以開始對話。'
+                    }</p>
                   </>
               }
             </div>
@@ -579,11 +740,11 @@ export default function Chat({ onBack }: Props) {
             </div>
           )}
 
-          <div className={`chat-input-box${!hasApiKey ? ' chat-input-box--disabled' : ''}`}>
+          <div className={`chat-input-box${!isLlmConfigured() ? ' chat-input-box--disabled' : ''}`}>
             <button
               className="input-action-btn"
               onClick={() => fileInputRef.current?.click()}
-              disabled={!hasApiKey || loading || processingFile}
+              disabled={!isLlmConfigured() || loading || processingFile}
               aria-label="上傳圖片或 PDF"
               title="上傳圖片或 PDF"
             >
@@ -597,18 +758,19 @@ export default function Chat({ onBack }: Props) {
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               placeholder={
-                !hasApiKey ? '請先設定 API Key' :
+                !isLlmConfigured()
+                  ? (llmProvider === 'ollama' ? '請先設定 Ollama' : '請先設定 API Key') :
                 uploadedFile ? '根據已載入文件提問… (Enter 送出，Shift+Enter 換行)' :
                 '輸入訊息… (Enter 送出，Shift+Enter 換行)'
               }
-              disabled={!hasApiKey || loading}
+              disabled={!isLlmConfigured() || loading}
               rows={1}
             />
 
             <button
               className={`input-send-btn${loading ? ' input-send-btn--loading' : ''}`}
               onClick={handleSend}
-              disabled={!hasApiKey || !input.trim() || loading}
+              disabled={!isLlmConfigured() || !input.trim() || loading}
               aria-label="送出"
             >
               <SendIcon />

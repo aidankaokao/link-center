@@ -133,6 +133,63 @@
   background: rgba(200, 169, 110, 0.08);
 }
 
+/* ── Sidebar category group ── */
+.lr-category-group {
+  margin-bottom: 4px;
+}
+
+.lr-category-heading {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(90deg, rgba(200,169,110,0.18) 0%, rgba(200,169,110,0.06) 100%);
+  border: none;
+  border-top: 1px solid rgba(200,169,110,0.15);
+  border-bottom: 1px solid rgba(200,169,110,0.15);
+  padding: 7px 14px 7px 20px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.3s ease;
+}
+.lr-category-heading:hover {
+  background: linear-gradient(90deg, rgba(200,169,110,0.28) 0%, rgba(200,169,110,0.12) 100%);
+}
+.lr-root.light .lr-category-heading {
+  background: #1a3060;
+  border-top: 1px solid #0e1f3d;
+  border-bottom: 1px solid #0e1f3d;
+  color: rgba(255,255,255,0.88);
+}
+.lr-root.light .lr-category-heading:hover {
+  background: #0e1f3d;
+}
+
+.lr-category-chevron {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.lr-category-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.lr-category-topics {
+  overflow: hidden;
+  max-height: 800px;
+  transition: max-height 0.25s ease;
+}
+.lr-category-topics--collapsed {
+  max-height: 0;
+}
+
 /* ── Main area ── */
 .lr-main {
   flex: 1;
@@ -720,6 +777,93 @@
   background: var(--danger-hover);
 }
 
+/* ── LLM Provider Tabs ── */
+.lr-admin-provider-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.lr-admin-provider-tab {
+  flex: 1;
+  padding: 5px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.lr-admin-provider-tab.active {
+  background: var(--surface);
+  color: var(--gold);
+  border: 1px solid var(--border);
+}
+
+.lr-admin-provider-tab:hover:not(.active) {
+  color: var(--text);
+}
+
+/* ── Category management ── */
+.lr-admin-cat-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.lr-admin-cat-row .lr-admin-input {
+  flex: 1;
+}
+
+.lr-admin-cat-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lr-admin-cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--input-bg);
+}
+
+.lr-admin-cat-name {
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ── Category select (admin panel + import) ── */
+.lr-cat-select {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.lr-cat-select:focus {
+  outline: none;
+  border-color: var(--input-focus);
+}
+
 /* ── Delete Confirm Modal ── */
 .lr-delete-backdrop {
   position: fixed;
@@ -1089,6 +1233,19 @@
   justify-content: space-between;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.lr-chat-provider-badge {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  background: rgba(200,169,110,0.1);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-left: auto;
+  margin-right: 6px;
   flex-shrink: 0;
 }
 .lr-chat-title {

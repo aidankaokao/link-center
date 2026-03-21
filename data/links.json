@@ -1,13 +1,6 @@
 [
   {
-    "id": "1",
-    "type": "link",
-    "name": "Google",
-    "description": "全球最大的搜尋引擎，提供網頁搜尋、地圖、新聞等綜合服務。",
-    "href": "https://google.com"
-  },
-  {
-    "id": "1774088010814",
+    "id": "1774112258524",
     "type": "folder",
     "name": "Aidan",
     "description": "",

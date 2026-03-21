@@ -252,6 +252,41 @@
   letter-spacing: 0.02em;
 }
 
+/* ── LLM Provider Tabs ── */
+.chat-provider-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+.chat-provider-tab {
+  flex: 1;
+  padding: 5px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.chat-provider-tab.active {
+  background: var(--surface);
+  color: var(--gold);
+  border: 1px solid var(--border);
+}
+
+.chat-provider-tab:hover:not(.active) {
+  color: var(--text);
+}
+
 /* ─────────────────────────────────────────────
    Main
    ───────────────────────────────────────────── */
@@ -291,6 +326,19 @@
 }
 
 .chat-topbar-title svg { width: 18px; height: 18px; color: var(--gold); }
+
+.chat-provider-badge {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  background: rgba(200,169,110,0.1);
+  border: 1px solid var(--gold-dim);
+  border-radius: 4px;
+  padding: 2px 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
 
 .chat-topbar-actions {
   display: flex;

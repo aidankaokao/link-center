@@ -9,8 +9,14 @@
         "title": "什麼是版本控制？",
         "content": "版本控制是一種記錄檔案隨時間變化的系統，讓你能夠隨時回溯到任何歷史版本。Git 是目前最廣泛使用的分散式版本控制系統，由 Linus Torvalds 在 2005 年為管理 Linux 核心而建立。與集中式系統不同，每個開發者都擁有完整的版本庫副本，即使沒有網路也能正常工作。",
         "highlights": [
-          { "keyword": "分散式", "explanation": "每個開發者本機都有完整的版本庫（repository）副本，不依賴單一中央伺服器。這意味著離線狀態下也能提交、查看歷史，只有需要與他人同步時才需要網路。" },
-          { "keyword": "版本庫", "explanation": "Repository（儲存庫），Git 追蹤所有變更的資料庫。本機版本庫位於專案根目錄的 .git 隱藏資料夾中。" }
+          {
+            "keyword": "分散式",
+            "explanation": "每個開發者本機都有完整的版本庫（repository）副本，不依賴單一中央伺服器。這意味著離線狀態下也能提交、查看歷史，只有需要與他人同步時才需要網路。"
+          },
+          {
+            "keyword": "版本庫",
+            "explanation": "Repository（儲存庫），Git 追蹤所有變更的資料庫。本機版本庫位於專案根目錄的 .git 隱藏資料夾中。"
+          }
         ],
         "practice": {
           "type": "action",
@@ -28,13 +34,21 @@
         "title": "初始化與複製儲存庫",
         "content": "有兩種方式開始一個 Git 專案：從零開始初始化（git init），或複製現有的遠端儲存庫（git clone）。git init 會在當前目錄建立一個新的空版本庫，產生 .git 資料夾。git clone 則會完整複製遠端版本庫，包含所有歷史紀錄。",
         "highlights": [
-          { "keyword": "git init", "explanation": "在當前目錄初始化一個全新的 Git 版本庫，建立 .git 隱藏資料夾。這是從本機新專案開始使用 Git 的第一步。" },
-          { "keyword": "git clone", "explanation": "從遠端 URL（如 GitHub）完整複製一個版本庫到本機，包含所有分支和提交歷史。語法：git clone <url> [目錄名稱]" }
+          {
+            "keyword": "git init",
+            "explanation": "在當前目錄初始化一個全新的 Git 版本庫，建立 .git 隱藏資料夾。這是從本機新專案開始使用 Git 的第一步。"
+          },
+          {
+            "keyword": "git clone",
+            "explanation": "從遠端 URL（如 GitHub）完整複製一個版本庫到本機，包含所有分支和提交歷史。語法：git clone <url> [目錄名稱]"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "初始化一個新的 Git 儲存庫，請輸入指令：",
-          "answers": ["git init"],
+          "answers": [
+            "git init"
+          ],
           "hint": "指令格式為 git + 子命令，子命令名稱是「初始化」的英文縮寫"
         }
       },
@@ -43,13 +57,22 @@
         "title": "暫存區與提交",
         "content": "Git 的工作流程分為三個區域：工作目錄（你實際編輯的地方）、暫存區（Staging Area，準備提交的變更）、版本庫（已提交的歷史）。使用 git add 將變更加入暫存區，再用 git commit 將暫存區的內容永久記錄到版本庫。每次 commit 都應該有清楚的訊息說明這次變更的目的。",
         "highlights": [
-          { "keyword": "暫存區", "explanation": "Staging Area（也稱 Index）。你可以精確控制哪些變更要納入這次 commit，而不是把所有修改一股腦提交。這讓每個 commit 能保持邏輯單一。" },
-          { "keyword": "git add", "explanation": "將指定檔案的變更加入暫存區。常用：git add <file>（指定檔案）、git add .（當前目錄所有變更）、git add -p（互動式選擇部分變更）" }
+          {
+            "keyword": "暫存區",
+            "explanation": "Staging Area（也稱 Index）。你可以精確控制哪些變更要納入這次 commit，而不是把所有修改一股腦提交。這讓每個 commit 能保持邏輯單一。"
+          },
+          {
+            "keyword": "git add",
+            "explanation": "將指定檔案的變更加入暫存區。常用：git add <file>（指定檔案）、git add .（當前目錄所有變更）、git add -p（互動式選擇部分變更）"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "將目前目錄中所有變更加入暫存區，請輸入指令：",
-          "answers": ["git add .", "git add -A"],
+          "answers": [
+            "git add .",
+            "git add -A"
+          ],
           "hint": "git add 後面加上路徑，. 表示當前目錄"
         }
       },
@@ -58,13 +81,21 @@
         "title": "查看狀態與歷史",
         "content": "git status 顯示工作目錄與暫存區的當前狀態，告訴你哪些檔案被修改、哪些已暫存、哪些未追蹤。git log 顯示提交歷史，包含 commit hash、作者、日期和訊息。加上 --oneline 參數可以用簡潔的單行格式顯示。這兩個指令是日常使用 Git 最頻繁的查詢工具。",
         "highlights": [
-          { "keyword": "commit hash", "explanation": "每個 commit 都有唯一的 40 位十六進位 SHA-1 雜湊值作為識別碼（如 a3f2c1d...）。通常只需前 7 位就足以唯一識別一個 commit。" },
-          { "keyword": "未追蹤", "explanation": "Untracked files — 存在於工作目錄但 Git 尚未納管的新檔案。需要 git add 才會開始追蹤，或加入 .gitignore 讓 Git 永久忽略。" }
+          {
+            "keyword": "commit hash",
+            "explanation": "每個 commit 都有唯一的 40 位十六進位 SHA-1 雜湊值作為識別碼（如 a3f2c1d...）。通常只需前 7 位就足以唯一識別一個 commit。"
+          },
+          {
+            "keyword": "未追蹤",
+            "explanation": "Untracked files — 存在於工作目錄但 Git 尚未納管的新檔案。需要 git add 才會開始追蹤，或加入 .gitignore 讓 Git 永久忽略。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "查看當前工作目錄與暫存區的狀態，請輸入指令：",
-          "answers": ["git status"],
+          "answers": [
+            "git status"
+          ],
           "hint": "這個指令非常常用，可以隨時執行"
         }
       },
@@ -73,8 +104,14 @@
         "title": ".gitignore — 忽略不需要追蹤的檔案",
         "content": "並非所有檔案都需要納入版本控制。.gitignore 是一個純文字設定檔，告訴 Git 忽略哪些檔案或目錄。常見的忽略對象包括：編譯產物（node_modules/、dist/、*.pyc）、環境設定（.env）、IDE 設定（.vscode/、.idea/）、作業系統產生的檔案（.DS_Store、Thumbs.db）。",
         "highlights": [
-          { "keyword": ".gitignore", "explanation": "放在版本庫根目錄（也可放在子目錄）的設定檔。每行一條規則，支援 glob 通配符（*、**、?）。以 # 開頭為註解，以 ! 開頭為例外規則（不忽略此檔案）。" },
-          { "keyword": "node_modules/", "explanation": "JavaScript 專案的依賴套件目錄，通常含有數萬個檔案，絕對不應提交到版本庫。透過 package.json 重新 npm install 即可還原。" }
+          {
+            "keyword": ".gitignore",
+            "explanation": "放在版本庫根目錄（也可放在子目錄）的設定檔。每行一條規則，支援 glob 通配符（*、**、?）。以 # 開頭為註解，以 ! 開頭為例外規則（不忽略此檔案）。"
+          },
+          {
+            "keyword": "node_modules/",
+            "explanation": "JavaScript 專案的依賴套件目錄，通常含有數萬個檔案，絕對不應提交到版本庫。透過 package.json 重新 npm install 即可還原。"
+          }
         ],
         "practice": {
           "type": "action",
@@ -95,13 +132,22 @@
         "title": "分支：平行開發的核心",
         "content": "分支（Branch）是 Git 最強大的功能之一。它讓你可以從主線上分叉，在獨立的環境中開發新功能或修復 bug，完成後再合併回去。Git 的分支操作極為輕量，建立分支幾乎是瞬間完成。預設分支通常命名為 main 或 master。HEAD 是一個特殊指標，指向你當前所在的分支和 commit。",
         "highlights": [
-          { "keyword": "HEAD", "explanation": "指向當前工作位置的特殊指標。通常指向某個分支的最新 commit。當你切換分支時，HEAD 隨之移動。進入 detached HEAD 狀態時，HEAD 直接指向某個 commit 而非分支。" },
-          { "keyword": "合併", "explanation": "Merge — 將一個分支的變更整合到另一個分支。Git 會嘗試自動合併，若同一位置有衝突則需手動解決。常見合併策略：fast-forward（直線歷史）和 recursive merge（產生 merge commit）。" }
+          {
+            "keyword": "HEAD",
+            "explanation": "指向當前工作位置的特殊指標。通常指向某個分支的最新 commit。當你切換分支時，HEAD 隨之移動。進入 detached HEAD 狀態時，HEAD 直接指向某個 commit 而非分支。"
+          },
+          {
+            "keyword": "合併",
+            "explanation": "Merge — 將一個分支的變更整合到另一個分支。Git 會嘗試自動合併，若同一位置有衝突則需手動解決。常見合併策略：fast-forward（直線歷史）和 recursive merge（產生 merge commit）。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "建立一個名為 feature/login 的新分支並立即切換到該分支，請輸入指令：",
-          "answers": ["git checkout -b feature/login", "git switch -c feature/login"],
+          "answers": [
+            "git checkout -b feature/login",
+            "git switch -c feature/login"
+          ],
           "hint": "有兩種方式：較舊的 checkout -b 或較新的 switch -c"
         }
       },
@@ -110,13 +156,21 @@
         "title": "Merge vs Rebase",
         "content": "整合分支有兩種主要方式：merge 和 rebase。git merge 保留完整的歷史，產生一個新的 merge commit，清楚呈現分支的存在。git rebase 則將你的 commit「搬移」到目標分支的最新點，讓歷史呈現為一條直線，更簡潔易讀。兩者都有適用場景，團隊應統一使用規範。",
         "highlights": [
-          { "keyword": "rebase", "explanation": "將當前分支的 commit 「重新播放」在目標分支的最新 commit 之上。這會改寫 commit hash，因此不應對已推送到遠端的分支使用 rebase，否則會造成他人困擾。" },
-          { "keyword": "merge commit", "explanation": "合併時產生的特殊 commit，有兩個父節點（parent），記錄了兩條分支的交會點。用 git log --graph 可以看到視覺化的分支合流圖形。" }
+          {
+            "keyword": "rebase",
+            "explanation": "將當前分支的 commit 「重新播放」在目標分支的最新 commit 之上。這會改寫 commit hash，因此不應對已推送到遠端的分支使用 rebase，否則會造成他人困擾。"
+          },
+          {
+            "keyword": "merge commit",
+            "explanation": "合併時產生的特殊 commit，有兩個父節點（parent），記錄了兩條分支的交會點。用 git log --graph 可以看到視覺化的分支合流圖形。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "將 feature/login 分支合併到當前分支，請輸入指令：",
-          "answers": ["git merge feature/login"],
+          "answers": [
+            "git merge feature/login"
+          ],
           "hint": "先確保你在目標分支（如 main），再執行合併指令"
         }
       },
@@ -125,13 +179,23 @@
         "title": "遠端協作：push 與 pull",
         "content": "遠端儲存庫（remote）讓多人協作成為可能。git push 將本機的 commit 推送到遠端，git pull 則將遠端的最新變更拉取到本機（相當於 git fetch + git merge）。origin 是預設的遠端名稱（git clone 時自動設定）。在 push 之前建議先 pull，避免衝突。",
         "highlights": [
-          { "keyword": "origin", "explanation": "克隆版本庫時 Git 自動建立的遠端別名，指向你克隆的來源 URL。你可以用 git remote -v 查看所有遠端設定，也可以用 git remote add 新增其他遠端。" },
-          { "keyword": "git fetch", "explanation": "從遠端下載最新資料（分支、commit），但不自動合併到本機工作分支。你可以先 fetch 查看遠端有什麼新變更，再決定是否 merge。" }
+          {
+            "keyword": "origin",
+            "explanation": "克隆版本庫時 Git 自動建立的遠端別名，指向你克隆的來源 URL。你可以用 git remote -v 查看所有遠端設定，也可以用 git remote add 新增其他遠端。"
+          },
+          {
+            "keyword": "git fetch",
+            "explanation": "從遠端下載最新資料（分支、commit），但不自動合併到本機工作分支。你可以先 fetch 查看遠端有什麼新變更，再決定是否 merge。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "將當前分支的 commit 推送到 origin 遠端，請輸入指令：",
-          "answers": ["git push", "git push origin HEAD", "git push origin main"],
+          "answers": [
+            "git push",
+            "git push origin HEAD",
+            "git push origin main"
+          ],
           "hint": "最簡單的形式只需 git push（若已設定 upstream tracking）"
         }
       }
@@ -142,13 +206,21 @@
         "title": "互動式 Rebase：整理 commit 歷史",
         "content": "git rebase -i（interactive rebase）讓你能夠修改、合併、重排、刪除尚未推送的 commit。這是整理「開發過程中凌亂的 commit」的利器。常用操作：pick（保留）、squash（合併到前一個 commit）、reword（修改 commit 訊息）、drop（刪除）。整理後推送需使用 git push --force-with-lease。",
         "highlights": [
-          { "keyword": "squash", "explanation": "將當前 commit 的變更合併進前一個 commit，並合併訊息。讓多個「WIP」小 commit 最終合為一個有意義的 commit。縮寫 s 也可使用。" },
-          { "keyword": "force-with-lease", "explanation": "比 --force 更安全的強制推送方式。如果遠端已被他人更新（你不知情），force-with-lease 會拒絕推送，防止意外覆蓋他人的工作。" }
+          {
+            "keyword": "squash",
+            "explanation": "將當前 commit 的變更合併進前一個 commit，並合併訊息。讓多個「WIP」小 commit 最終合為一個有意義的 commit。縮寫 s 也可使用。"
+          },
+          {
+            "keyword": "force-with-lease",
+            "explanation": "比 --force 更安全的強制推送方式。如果遠端已被他人更新（你不知情），force-with-lease 會拒絕推送，防止意外覆蓋他人的工作。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "對最近 3 個 commit 進行互動式 rebase，請輸入指令：",
-          "answers": ["git rebase -i HEAD~3"],
+          "answers": [
+            "git rebase -i HEAD~3"
+          ],
           "hint": "HEAD~3 表示從 HEAD 往回數 3 個 commit"
         }
       },
@@ -157,16 +229,26 @@
         "title": "Stash：臨時儲存未完成的工作",
         "content": "當你正在開發到一半，突然需要切換分支處理緊急 bug，但又不想提交未完成的代碼時，git stash 是最佳解。它將工作目錄和暫存區的變更臨時「藏起來」，讓你有乾淨的工作目錄。完成緊急任務後，用 git stash pop 恢復原本的工作。",
         "highlights": [
-          { "keyword": "git stash", "explanation": "將當前未提交的變更（工作目錄 + 暫存區）儲存到一個暫存堆疊（stash stack）。可以堆疊多個 stash，用 git stash list 查看所有儲存的 stash。" },
-          { "keyword": "git stash pop", "explanation": "從 stash 堆疊頂部取出最新的 stash 並套用到工作目錄，同時從堆疊中移除它。若想保留 stash 副本，使用 git stash apply 代替。" }
+          {
+            "keyword": "git stash",
+            "explanation": "將當前未提交的變更（工作目錄 + 暫存區）儲存到一個暫存堆疊（stash stack）。可以堆疊多個 stash，用 git stash list 查看所有儲存的 stash。"
+          },
+          {
+            "keyword": "git stash pop",
+            "explanation": "從 stash 堆疊頂部取出最新的 stash 並套用到工作目錄，同時從堆疊中移除它。若想保留 stash 副本，使用 git stash apply 代替。"
+          }
         ],
         "practice": {
           "type": "code",
           "prompt": "將當前所有未提交的變更儲存到 stash，並附加說明訊息「WIP: add login form」，請輸入指令：",
-          "answers": ["git stash push -m \"WIP: add login form\"", "git stash save \"WIP: add login form\""],
+          "answers": [
+            "git stash push -m \"WIP: add login form\"",
+            "git stash save \"WIP: add login form\""
+          ],
           "hint": "使用 -m 參數可以為 stash 加上說明文字"
         }
       }
     ]
-  }
+  },
+  "category": "Infra"
 }

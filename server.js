@@ -111,6 +111,87 @@ createServer(async (req, res) => {
 
   const LEARNER_DIR = join(__dirname, 'data', 'learner')
 
+  const CATEGORIES_FILE = join(LEARNER_DIR, '_categories.json')
+
+  function readCategories() {
+    try {
+      if (existsSync(CATEGORIES_FILE)) return JSON.parse(readFileSync(CATEGORIES_FILE, 'utf-8'))
+    } catch {}
+    return []
+  }
+  function writeCategories(arr) {
+    mkdirSync(LEARNER_DIR, { recursive: true })
+    writeFileSync(CATEGORIES_FILE, JSON.stringify(arr, null, 2), 'utf-8')
+  }
+
+  if (req.url === '/api/learner/categories' && req.method === 'GET') {
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify(['未分類', ...readCategories()]))
+    return
+  }
+
+  if (req.url === '/api/learner/categories' && req.method === 'POST') {
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const { name } = JSON.parse(body)
+        if (!name || name === '未分類') {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Invalid name' }))
+          return
+        }
+        const cats = readCategories()
+        if (cats.includes(name)) {
+          res.writeHead(409, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Already exists' }))
+          return
+        }
+        writeCategories([...cats, name])
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ ok: true }))
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON' }))
+      }
+    })
+    return
+  }
+
+  if (req.url.startsWith('/api/learner/categories/') && req.method === 'DELETE') {
+    const name = decodeURIComponent(req.url.slice('/api/learner/categories/'.length))
+    if (!name || name === '未分類') {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Cannot delete built-in category' }))
+      return
+    }
+    // Check if any topic uses this category
+    try {
+      if (existsSync(LEARNER_DIR)) {
+        const files = readdirSync(LEARNER_DIR).filter(f => f.endsWith('.json') && !f.endsWith('.backup.json') && f !== '_categories.json')
+        for (const f of files) {
+          try {
+            const data = JSON.parse(readFileSync(join(LEARNER_DIR, f), 'utf-8'))
+            if (data.category === name) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ error: 'category-not-empty' }))
+              return
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Server error' }))
+      return
+    }
+    const cats = readCategories().filter(c => c !== name)
+    writeCategories(cats)
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ ok: true }))
+    return
+  }
+
   if (req.url === '/api/learner' && req.method === 'GET') {
     try {
       if (!existsSync(LEARNER_DIR)) {
@@ -118,11 +199,11 @@ createServer(async (req, res) => {
         res.end('[]')
         return
       }
-      const files = readdirSync(LEARNER_DIR).filter(f => f.endsWith('.json') && !f.endsWith('.backup.json'))
+      const files = readdirSync(LEARNER_DIR).filter(f => f.endsWith('.json') && !f.endsWith('.backup.json') && f !== '_categories.json')
       const topics = files.map(f => {
         try {
           const data = JSON.parse(readFileSync(join(LEARNER_DIR, f), 'utf-8'))
-          return { id: data.id, name: data.name, description: data.description }
+          return { id: data.id, name: data.name, description: data.description, category: data.category ?? '未分類' }
         } catch { return null }
       }).filter(Boolean)
       res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -137,7 +218,7 @@ createServer(async (req, res) => {
   if (req.url.startsWith('/api/learner/') && req.method === 'GET') {
     const id = req.url.slice('/api/learner/'.length).replace(/[^a-zA-Z0-9_-]/g, '')
     const file = join(LEARNER_DIR, `${id}.json`)
-    if (!id || !existsSync(file)) {
+    if (!id || id === '_categories' || !existsSync(file)) {
       res.writeHead(404, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: 'Not found' }))
       return

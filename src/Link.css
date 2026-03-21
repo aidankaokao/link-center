@@ -756,6 +756,43 @@
   margin-top: .25rem;
 }
 
+.lk-dialog-desc {
+  font-size: .85rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.lk-delete-code {
+  font-family: 'DM Mono', monospace;
+  font-size: .82rem;
+  background: var(--danger-hover);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.btn-danger {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: .875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.btn-danger:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.btn-danger:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* ── Keyframes ── */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(20px); }

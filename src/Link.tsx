@@ -198,6 +198,11 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
   const [passwordInput, setPasswordInput] = useState('')
   const [passwordError, setPasswordError] = useState('')
 
+  // Delete confirm modal
+  interface DeleteConfirmModal { itemId: string; itemName: string }
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<DeleteConfirmModal | null>(null)
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState('')
+
   // Derived
   const currentItems = getChildrenAtPath(root, navPath) ?? []
   const breadcrumbs = buildBreadcrumbs(root, navPath)
@@ -266,13 +271,28 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
 
   function handleDelete(id: string) {
     const item = currentItems.find(i => i.id === id)
+    setDeleteConfirmModal({ itemId: id, itemName: item?.name ?? '' })
+    setDeleteConfirmInput('')
+  }
+
+  function handleDeleteConfirm() {
+    if (!deleteConfirmModal || deleteConfirmInput !== 'DELETE') return
+    const { itemId } = deleteConfirmModal
+    setDeleteConfirmModal(null)
+    setDeleteConfirmInput('')
+    const item = currentItems.find(i => i.id === itemId)
     if (item?.type === 'folder' && item.password) {
-      setPasswordModal({ action: 'delete', itemId: id })
+      setPasswordModal({ action: 'delete', itemId })
       setPasswordInput('')
       setPasswordError('')
       return
     }
-    _doDelete(id)
+    _doDelete(itemId)
+  }
+
+  function handleDeleteCancel() {
+    setDeleteConfirmModal(null)
+    setDeleteConfirmInput('')
   }
 
   function _doEnterFolder(id: string) {
@@ -349,6 +369,37 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
             <div className="lk-dialog-actions">
               <button className="btn-primary" onClick={handlePasswordConfirm}>確認</button>
               <button className="btn-secondary" onClick={handlePasswordCancel}>取消</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteConfirmModal && (
+        <div className="lk-overlay" onClick={handleDeleteCancel}>
+          <div className="lk-dialog" onClick={e => e.stopPropagation()}>
+            <h3 className="lk-dialog-title">確認刪除</h3>
+            <p className="lk-dialog-desc">
+              即將刪除「<strong>{deleteConfirmModal.itemName}</strong>」，此操作無法復原。<br />
+              請輸入 <code className="lk-delete-code">DELETE</code> 以確認。
+            </p>
+            <input
+              className="form-input"
+              autoFocus
+              value={deleteConfirmInput}
+              onChange={e => setDeleteConfirmInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleDeleteConfirm()}
+              placeholder="輸入 DELETE"
+            />
+            <div className="lk-dialog-actions">
+              <button
+                className="btn-danger"
+                onClick={handleDeleteConfirm}
+                disabled={deleteConfirmInput !== 'DELETE'}
+              >
+                刪除
+              </button>
+              <button className="btn-secondary" onClick={handleDeleteCancel}>取消</button>
             </div>
           </div>
         </div>
