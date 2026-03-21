@@ -5,6 +5,7 @@ services:
       - "${UI_PORT:-3000}:3000"
     volumes:
       - ./data:/app/data
+      - ./models:/app/models
     restart: unless-stopped
     logging:
       driver: json-file

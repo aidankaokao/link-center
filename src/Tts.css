@@ -1,0 +1,584 @@
+/* ─────────────────────────────────────────────
+   TTS — Dark / Light Theme
+   ───────────────────────────────────────────── */
+
+/* ── Dark theme (default) ── */
+.tts-root {
+  --bg:             #050d1a;
+  --surface:        rgba(255, 255, 255, 0.13);
+  --border:         rgba(255, 255, 255, 0.18);
+  --text:           #e8e4dc;
+  --muted:          #6b7a90;
+  --gold:           #c8a96e;
+  --gold-dim:       #8a7249;
+  --sidebar-bg:     rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --topbar-bg:      rgba(5, 13, 26, 0.85);
+  --input-bg:       rgba(255, 255, 255, 0.07);
+  --input-border:   rgba(255, 255, 255, 0.14);
+  --input-focus:    rgba(200, 169, 110, 0.5);
+  --card-bg:        rgba(255, 255, 255, 0.04);
+  --card-border:    rgba(255, 255, 255, 0.10);
+  --btn-primary:    #c8a96e;
+  --btn-primary-text: #0a0a0a;
+  --danger:         #e05c5c;
+  --danger-hover:   rgba(224, 92, 92, 0.12);
+  --status-ok:      #4caf7d;
+  --status-loading: #c8a96e;
+  --status-error:   #e05c5c;
+}
+
+/* ── Light theme ── */
+.tts-root.light {
+  --bg:             #eef3fb;
+  --surface:        #ffffff;
+  --border:         #c8d8f0;
+  --text:           #0e1f3d;
+  --muted:          #6e82a4;
+  --gold:           #9a6f30;
+  --gold-dim:       #b8924a;
+  --sidebar-bg:     #ffffff;
+  --sidebar-border: #d0dff4;
+  --topbar-bg:      rgba(238, 243, 251, 0.92);
+  --input-bg:       #f4f7fd;
+  --input-border:   #c0d0ec;
+  --input-focus:    #9a6f30;
+  --card-bg:        #ffffff;
+  --card-border:    #d0dff4;
+  --btn-primary:    #0e1f3d;
+  --btn-primary-text: #ffffff;
+  --danger:         #c94040;
+  --danger-hover:   rgba(201, 64, 64, 0.08);
+  --status-ok:      #2e9c5e;
+  --status-loading: #9a6f30;
+  --status-error:   #c94040;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Root layout ── */
+.tts-root {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(40,100,200,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 88%, rgba(20,60,150,0.15) 0%, transparent 55%),
+    linear-gradient(160deg, #0b1f40 0%, #050d1c 50%, #091528 100%);
+  color: var(--text);
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  transition: background 0.4s ease, color 0.4s ease;
+}
+
+.tts-root.light {
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(100,160,255,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 85% 88%, rgba(60,120,220,0.10) 0%, transparent 55%),
+    linear-gradient(160deg, #ddeaff 0%, #eef3fb 50%, #d8e8ff 100%);
+}
+
+/* ─────────────────────────────────────────────
+   Sidebar
+   ───────────────────────────────────────────── */
+
+.tts-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease;
+  overflow: hidden;
+}
+
+.tts-sidebar--collapsed {
+  width: 52px;
+}
+
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 12px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.sidebar-brand {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar-toggle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--sidebar-border);
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  background: rgba(200, 169, 110, 0.08);
+}
+
+.sidebar-toggle svg { width: 15px; height: 15px; }
+
+.sidebar-body {
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fadeIn 0.2s ease both;
+}
+
+.sidebar-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.sidebar-section-label svg { width: 13px; height: 13px; }
+
+/* ── Model status ── */
+.sidebar-model-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.sidebar-model-status--ready   { color: var(--status-ok); border-color: rgba(76,175,125,0.3); }
+.sidebar-model-status--loading { color: var(--status-loading); }
+.sidebar-model-status--error   { color: var(--status-error); border-color: rgba(224,92,92,0.3); }
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+  transition: background 0.3s ease;
+}
+
+.sidebar-model-status--ready   .status-dot { background: var(--status-ok); box-shadow: 0 0 6px rgba(76,175,125,0.5); }
+.sidebar-model-status--loading .status-dot { background: var(--status-loading); animation: pulse 1.2s ease-in-out infinite; }
+.sidebar-model-status--error   .status-dot { background: var(--status-error); }
+
+/* ── Speaker select ── */
+.sidebar-select {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 9px 28px 9px 12px;
+  font-size: 13px;
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7a90' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  transition: border-color 0.25s ease;
+}
+
+.sidebar-select:focus { border-color: var(--input-focus); }
+.sidebar-select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Sidebar hint ── */
+.sidebar-hint {
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.6;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
+/* ─────────────────────────────────────────────
+   Main
+   ───────────────────────────────────────────── */
+
+.tts-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.tts-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 56px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.tts-topbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.tts-topbar-title svg { width: 18px; height: 18px; color: var(--gold); }
+
+.tts-topbar-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.tts-ctrl-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.tts-ctrl-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  transform: scale(1.08);
+}
+
+.tts-ctrl-btn svg { width: 16px; height: 16px; }
+
+/* ── Content ── */
+.tts-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tts-content::-webkit-scrollbar { width: 4px; }
+.tts-content::-webkit-scrollbar-track { background: transparent; }
+.tts-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── Cards ── */
+.tts-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.tts-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tts-card-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tts-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.tts-char-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+/* ── Upload button ── */
+.tts-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--muted);
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.tts-upload-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+
+.tts-upload-btn svg { width: 13px; height: 13px; }
+
+/* ── File badge ── */
+.tts-file-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  font-size: 13px;
+  color: var(--text);
+  animation: fadeIn 0.2s ease both;
+}
+
+.tts-file-badge > svg { width: 14px; height: 14px; color: var(--gold); flex-shrink: 0; }
+
+.tts-file-badge-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.tts-file-badge-remove {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.tts-file-badge-remove:hover { color: var(--danger); }
+.tts-file-badge-remove svg { width: 11px; height: 11px; }
+
+/* ── Textarea ── */
+.tts-textarea {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  color: var(--text);
+  line-height: 1.7;
+  resize: vertical;
+  min-height: 120px;
+  outline: none;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.tts-textarea::placeholder { color: var(--muted); opacity: 0.6; }
+.tts-textarea:focus { border-color: var(--input-focus); }
+.tts-textarea[readonly] { cursor: default; opacity: 0.85; }
+
+/* ── Generate button ── */
+.tts-generate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 10px;
+  border: none;
+  background: var(--btn-primary);
+  color: var(--btn-primary-text);
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.tts-generate-btn svg { width: 18px; height: 18px; }
+
+.tts-generate-btn:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+
+.tts-generate-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.tts-generate-btn--loading {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Download WAV button ── */
+.tts-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--muted);
+  font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  animation: fadeIn 0.2s ease both;
+}
+
+.tts-download-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+}
+
+.tts-download-btn svg { width: 13px; height: 13px; }
+
+/* ── Error ── */
+.tts-error {
+  font-size: 13px;
+  color: var(--danger);
+  background: var(--danger-hover);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 10px 14px;
+  letter-spacing: 0.04em;
+  animation: fadeIn 0.2s ease both;
+}
+
+/* ── Audio player ── */
+.tts-player {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: fadeIn 0.3s ease both;
+}
+
+.tts-audio-element {
+  width: 100%;
+  height: 40px;
+  accent-color: var(--gold);
+  border-radius: 8px;
+  outline: none;
+}
+
+.tts-audio-meta {
+  font-size: 12px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+}
+
+/* ── Player placeholder ── */
+.tts-player-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 36px 0;
+  color: var(--muted);
+  opacity: 0.45;
+  text-align: center;
+}
+
+.tts-player-placeholder svg { width: 30px; height: 30px; }
+
+.tts-player-placeholder p {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+/* ── Spinner ── */
+.tts-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(10, 10, 10, 0.3);
+  border-top-color: #0a0a0a;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.tts-root.light .tts-generate-btn .tts-spinner {
+  border-color: rgba(255,255,255,0.3);
+  border-top-color: #ffffff;
+}
+
+/* ── Keyframes ── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

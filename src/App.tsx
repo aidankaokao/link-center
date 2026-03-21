@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import Home from './Home'
 import Link, { type TreeItem } from './Link'
 import Chat from './Chat'
+import Tts from './Tts'
 
-export type Page = 'home' | 'link' | 'chat'
+export type Page = 'home' | 'link' | 'chat' | 'tts'
 
 function App() {
   const [page, setPage] = useState<Page>('home')
@@ -34,6 +35,9 @@ function App() {
   )
   if (page === 'chat') return (
     <Chat onBack={() => setPage('home')} />
+  )
+  if (page === 'tts') return (
+    <Tts onBack={() => setPage('home')} />
   )
   return <Home onNavigate={setPage} />
 }

@@ -20,9 +20,9 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     index: '03',
-    name: '即將推出',
-    description: '此功能正在開發中，敬請期待後續更新。',
-    disabled: true,
+    name: '文字轉語音',
+    description: '使用本地 AI 模型將中文文字轉為語音，支援多種聲線，完全離線運行。',
+    page: 'tts',
   },
 ]
 
