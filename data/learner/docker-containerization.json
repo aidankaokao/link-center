@@ -1,0 +1,214 @@
+{
+  "id": "docker-containerization",
+  "name": "Docker容器化",
+  "description": "用容器快速部署應用",
+  "levels": {
+    "beginner": [
+      {
+        "id": "what-is-docker",
+        "title": "Docker是什麼",
+        "content": "Docker是一種容器化技術，讓開發者可以將應用程式與其執行環境一起打包成一個稱為image的單位，並透過container來執行。與傳統虛擬機相比，Docker更輕量，啟動速度更快，且資源使用更有效率。透過Docker，可以確保在不同環境（例如開發、測試、正式環境）中，應用行為一致，避免「在我電腦可以跑」的問題。",
+        "highlights": [
+          {
+            "keyword": "image",
+            "explanation": "image是應用程式與其依賴環境的唯讀模板，類似一個可重複使用的安裝包，可用來啟動多個container。"
+          },
+          {
+            "keyword": "container",
+            "explanation": "container是image執行後的實例，具有獨立的檔案系統與執行空間，但共享主機核心，資源使用較輕量。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出查看本機Docker版本的指令",
+          "answers": [
+            "docker --version",
+            "docker version"
+          ],
+          "hint": "使用docker開頭的基本指令"
+        }
+      },
+      {
+        "id": "docker-install-run",
+        "title": "安裝與執行第一個容器",
+        "content": "安裝Docker後，可以透過簡單指令快速啟動容器。例如使用docker run指令，可以從遠端下載image並立即執行。Docker Hub提供大量現成image，例如nginx、redis等。當第一次執行時，Docker會自動下載image並建立container。這種即用即跑的模式，大幅降低部署門檻。",
+        "highlights": [
+          {
+            "keyword": "docker run",
+            "explanation": "docker run會同時完成下載image、建立container並執行，是最常用的入門指令。"
+          },
+          {
+            "keyword": "Docker Hub",
+            "explanation": "Docker Hub是官方的image倉庫，提供大量開源與官方維護的image，可直接使用或延伸。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出執行nginx容器並映射80 port的指令",
+          "answers": [
+            "docker run -p 80:80 nginx",
+            "docker run --publish 80:80 nginx"
+          ],
+          "hint": "使用-p來做port mapping"
+        }
+      },
+      {
+        "id": "docker-images-containers",
+        "title": "Image與Container管理",
+        "content": "在Docker中，image與container是核心概念。image是靜態模板，而container是執行中的實體。你可以透過docker images查看所有image，並用docker ps查看運行中的container。理解兩者關係後，可以更有效管理資源，例如刪除未使用的image或停止不需要的container。",
+        "highlights": [
+          {
+            "keyword": "docker images",
+            "explanation": "docker images用於列出本機所有已下載的image，包含名稱、版本與大小等資訊。"
+          },
+          {
+            "keyword": "docker ps",
+            "explanation": "docker ps用於查看目前運行中的container，加上-a可查看所有container。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出列出所有container（包含已停止）的指令",
+          "answers": [
+            "docker ps -a"
+          ],
+          "hint": "docker ps加上參數"
+        }
+      },
+      {
+        "id": "dockerfile-basics",
+        "title": "Dockerfile基礎",
+        "content": "Dockerfile是用來定義image建構流程的腳本，透過一系列指令（如FROM、RUN、COPY）來描述環境配置。開發者可以將自己的應用與依賴寫入Dockerfile，再透過docker build建立自訂image。這讓應用部署變得標準化與可重現。",
+        "highlights": [
+          {
+            "keyword": "Dockerfile",
+            "explanation": "Dockerfile是一個文字檔，描述如何從基礎image建立自訂image，是容器化流程的核心。"
+          },
+          {
+            "keyword": "docker build",
+            "explanation": "docker build會依照Dockerfile內容建構image，並可指定tag方便管理。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出用Dockerfile建立image並命名為myapp的指令",
+          "answers": [
+            "docker build -t myapp ."
+          ],
+          "hint": "使用-t指定名稱"
+        }
+      },
+      {
+        "id": "docker-compose-intro",
+        "title": "Docker Compose入門",
+        "content": "當應用包含多個服務（例如API、資料庫、快取）時，可以使用Docker Compose進行管理。透過docker-compose.yml，可以一次定義多個container及其關係，例如網路與依賴。這讓多服務系統可以用一個指令啟動或停止，特別適合開發與測試環境。",
+        "highlights": [
+          {
+            "keyword": "docker-compose.yml",
+            "explanation": "docker-compose.yml是用來定義多個服務的設定檔，包含image、port、環境變數等。"
+          },
+          {
+            "keyword": "docker-compose up",
+            "explanation": "docker-compose up可以一次啟動所有服務，常搭配-d參數在背景執行。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出使用docker-compose在背景啟動服務的指令",
+          "answers": [
+            "docker-compose up -d",
+            "docker compose up -d"
+          ],
+          "hint": "記得加-d"
+        }
+      }
+    ],
+    "intermediate": [
+      {
+        "id": "network-volume",
+        "title": "網路與資料持久化",
+        "content": "Docker提供network與volume機制來解決服務間通訊與資料保存問題。network讓container之間可以透過名稱互相連線，而volume則用於將資料儲存在主機，避免container刪除後資料遺失。這對於資料庫或需要持久化的應用非常重要。",
+        "highlights": [
+          {
+            "keyword": "volume",
+            "explanation": "volume是Docker管理的資料儲存方式，可將container資料持久化到主機或其他位置。"
+          },
+          {
+            "keyword": "network",
+            "explanation": "network讓多個container形成虛擬網路，可透過服務名稱互相存取。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出建立名為myvolume的volume指令",
+          "answers": [
+            "docker volume create myvolume"
+          ],
+          "hint": "docker volume create"
+        }
+      },
+      {
+        "id": "image-optimization",
+        "title": "Image最佳化",
+        "content": "建立image時，應注意大小與安全性。例如減少layer數量、使用較小的base image（如alpine），並清除不必要的檔案。這不僅能提升下載速度，也能降低攻擊面。良好的Dockerfile設計是生產環境的重要基礎。",
+        "highlights": [
+          {
+            "keyword": "layer",
+            "explanation": "Docker image由多個layer組成，每個指令都會產生一層，過多layer會增加體積與複雜度。"
+          }
+        ],
+        "practice": {
+          "type": "action",
+          "prompt": "請列出優化Docker image的做法",
+          "items": [
+            "使用輕量base image如alpine",
+            "合併多個RUN指令",
+            "刪除暫存檔案",
+            "避免安裝不必要套件"
+          ]
+        }
+      },
+      {
+        "id": "env-config",
+        "title": "環境變數與設定管理",
+        "content": "Docker支援透過環境變數傳遞設定，讓image可以在不同環境下彈性運作。例如資料庫連線字串、API金鑰等都可以透過-e或.env檔案設定。這讓同一個image可以適用於多個部署情境。",
+        "highlights": [
+          {
+            "keyword": ".env",
+            "explanation": ".env檔案用於集中管理環境變數，方便在docker-compose中引用。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出設定環境變數KEY=123的docker run指令",
+          "answers": [
+            "docker run -e KEY=123 nginx"
+          ],
+          "hint": "使用-e"
+        }
+      },
+      {
+        "id": "compose-advanced",
+        "title": "Compose進階應用",
+        "content": "Docker Compose支援服務依賴、重啟策略與網路設定。可以定義depends_on來控制啟動順序，或設定restart策略確保服務穩定。此外，也可以透過多個compose檔案覆寫設定，實現開發與正式環境的差異。",
+        "highlights": [
+          {
+            "keyword": "depends_on",
+            "explanation": "depends_on用於指定服務啟動順序，但不保證服務已完全就緒。"
+          }
+        ],
+        "practice": {
+          "type": "action",
+          "prompt": "請列出使用docker-compose的優勢",
+          "items": [
+            "集中管理多個服務",
+            "快速啟動與關閉系統",
+            "統一設定環境",
+            "降低部署複雜度"
+          ]
+        }
+      }
+    ],
+    "advanced": []
+  }
+}

@@ -16,3 +16,22 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  postgres:
+    image: postgres:15
+    container_name: link-center-postgres
+    environment:
+      POSTGRES_USER: filecenter
+      POSTGRES_PASSWORD: Fc2026PgLc!
+      POSTGRES_DB: filecenter
+    volumes:
+      - link-center-postgres-vol:/var/lib/postgresql/data
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  link-center-postgres-vol:

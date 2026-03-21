@@ -1,18 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import Home from './Home'
 import Link, { type TreeItem } from './Link'
 import Chat from './Chat'
 import Tts from './Tts'
+import Celebrity from './Celebrity'
+import Learner from './Learner'
 
 function AppRoutes() {
   const navigate = useNavigate()
   const [root, setRoot] = useState<TreeItem[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [linkConflict, setLinkConflict] = useState(false)
+  const linksEtag = useRef('')
 
   useEffect(() => {
     fetch('/api/links')
-      .then(r => r.json())
+      .then(r => {
+        linksEtag.current = (r.headers.get('etag') ?? '').replace(/"/g, '')
+        return r.json()
+      })
       .then((data: TreeItem[]) => setRoot(data))
       .catch(() => {})
       .finally(() => setLoaded(true))
@@ -22,9 +29,25 @@ function AppRoutes() {
     setRoot(newRoot)
     fetch('/api/links', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(linksEtag.current ? { 'If-Match': `"${linksEtag.current}"` } : {}),
+      },
       body: JSON.stringify(newRoot),
-    }).catch(() => {})
+    })
+      .then(async r => {
+        if (r.status === 409) {
+          const fresh = await fetch('/api/links')
+          linksEtag.current = (fresh.headers.get('etag') ?? '').replace(/"/g, '')
+          const freshData: TreeItem[] = await fresh.json()
+          setRoot(freshData)
+          setLinkConflict(true)
+          setTimeout(() => setLinkConflict(false), 5000)
+          return
+        }
+        linksEtag.current = (r.headers.get('etag') ?? '').replace(/"/g, '')
+      })
+      .catch(() => {})
   }
 
   if (!loaded) return null
@@ -32,12 +55,28 @@ function AppRoutes() {
   const goHome = () => navigate('/')
 
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/link" element={<Link root={root} onRootChange={handleRootChange} onBack={goHome} />} />
-      <Route path="/chat" element={<Chat onBack={goHome} />} />
-      <Route path="/tts" element={<Tts onBack={goHome} />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/link" element={<Link root={root} onRootChange={handleRootChange} onBack={goHome} />} />
+        <Route path="/chat" element={<Chat onBack={goHome} />} />
+        <Route path="/tts" element={<Tts onBack={goHome} />} />
+        <Route path="/celebrity" element={<Celebrity onBack={goHome} />} />
+        <Route path="/learner" element={<Learner onBack={goHome} />} />
+      </Routes>
+      {linkConflict && (
+        <div style={{
+          position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
+          background: '#1a2a4a', border: '1px solid rgba(224,92,92,0.5)',
+          color: '#e8e4dc', padding: '10px 20px', borderRadius: '10px',
+          fontSize: '13px', letterSpacing: '0.04em', zIndex: 9999,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+          fontFamily: "'Noto Sans TC', sans-serif", whiteSpace: 'nowrap',
+        }}>
+          ⚠ 資料已被他人更新，已自動重新整理，請重新操作。
+        </div>
+      )}
+    </>
   )
 }
 

@@ -1,0 +1,258 @@
+{
+  "id": "streamlit-learning",
+  "name": "Streamlit",
+  "description": "用 Python 快速做互動網頁",
+  "levels": {
+    "beginner": [
+      {
+        "id": "streamlit-overview",
+        "title": "認識 Streamlit 的定位",
+        "content": "Streamlit 是一個以 Python 為核心的網頁應用框架，特別適合資料分析、機器學習展示與內部工具開發。它最大的特色是不用先學前端框架，也不需要自己處理 HTML、CSS 與 JavaScript，就能快速把程式結果做成可互動的介面。開發時只要依照程式撰寫順序放入元件，頁面就會自動生成。對初學者來說，這種「資料處理程式直接變介面」的方式很直覺，尤其適合做報表、模型展示、查詢工具與原型驗證。",
+        "highlights": [
+          {
+            "keyword": "Streamlit",
+            "explanation": "Streamlit 是專門用來把 Python 程式快速做成互動式網頁的框架，特別適合資料分析、模型展示與內部系統原型開發。"
+          },
+          {
+            "keyword": "可互動的介面",
+            "explanation": "可互動的介面指的是使用者可以透過按鈕、輸入框、下拉選單或滑桿操作頁面，並立即看到程式計算後的結果。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出啟動 app.py 這個 Streamlit 應用的指令。",
+          "answers": [
+            "streamlit run app.py"
+          ],
+          "hint": "使用 streamlit run 加上檔名。"
+        }
+      },
+      {
+        "id": "basic-output-components",
+        "title": "建立第一個輸出畫面",
+        "content": "在 Streamlit 中，最基本的工作就是把內容顯示到頁面上。你可以使用 st.title 建立主標題，使用 st.header 與 st.subheader 做出層級結構，再用 st.write、st.text 或 st.markdown 顯示說明文字與資料。這些元件會依照程式碼的先後順序自動排列，因此撰寫時不必額外設計版面定位。對初學者來說，先熟悉這些基本輸出元件非常重要，因為後續不論是顯示資料表、模型結果，還是建立操作流程，幾乎都要先從清楚的畫面輸出開始。",
+        "highlights": [
+          {
+            "keyword": "st.title",
+            "explanation": "st.title 用來建立頁面主標題，通常放在應用最上方，讓使用者一進入頁面就知道這個工具的用途。"
+          },
+          {
+            "keyword": "st.write",
+            "explanation": "st.write 是 Streamlit 最常用的通用輸出函式，可以顯示文字、數字、列表、字典與 DataFrame，使用彈性很高。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出顯示標題「My First App」的程式碼。",
+          "answers": [
+            "st.title(\"My First App\")",
+            "st.title('My First App')"
+          ],
+          "hint": "使用 st.title。"
+        }
+      },
+      {
+        "id": "input-widgets-intro",
+        "title": "加入使用者輸入元件",
+        "content": "Streamlit 的互動性來自各種輸入元件，例如 st.button、st.text_input、st.number_input、st.selectbox 與 st.slider。這些元件會回傳使用者目前選擇的值，因此你可以把它們當作一般 Python 變數來使用，進一步控制後續的計算與畫面。這種寫法的好處是很容易把原本只能在終端機執行的腳本，改成可讓他人直接操作的工具。初學時建議先練習按鈕、文字輸入框與下拉選單，理解「輸入值會影響頁面結果」這個核心概念。",
+        "highlights": [
+          {
+            "keyword": "st.button",
+            "explanation": "st.button 會建立一個按鈕，當使用者點擊時，該次執行會回傳 True，常用於觸發查詢、計算或送出動作。"
+          },
+          {
+            "keyword": "st.text_input",
+            "explanation": "st.text_input 是文字輸入框，可用來讓使用者輸入名稱、關鍵字、參數或查詢條件，是很常見的互動元件。"
+          },
+          {
+            "keyword": "st.selectbox",
+            "explanation": "st.selectbox 可提供多個選項給使用者挑選，適合做類別切換、模型選擇或條件篩選。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出建立一個標籤為「請輸入姓名」的文字輸入框程式碼。",
+          "answers": [
+            "st.text_input(\"請輸入姓名\")",
+            "st.text_input('請輸入姓名')"
+          ],
+          "hint": "使用 st.text_input。"
+        }
+      },
+      {
+        "id": "data-display-basics",
+        "title": "顯示表格與圖表",
+        "content": "Streamlit 很適合用來展示資料，因此你會經常使用 st.dataframe、st.table、st.line_chart、st.bar_chart 等元件。若你已經有 pandas DataFrame，可以直接丟給 st.dataframe 顯示成可捲動的表格；若你有 matplotlib 或 plotly 圖，也可以透過對應函式嵌入頁面。這代表你不需要自己實作前端圖表元件，只要先把資料整理好，就能快速做出可閱讀的分析介面。對資料工作者而言，這大幅降低了從分析結果到可視化展示之間的成本。",
+        "highlights": [
+          {
+            "keyword": "st.dataframe",
+            "explanation": "st.dataframe 用於顯示可互動的表格，支援捲動與欄位檢視，適合展示 pandas DataFrame 與查詢結果。"
+          },
+          {
+            "keyword": "st.line_chart",
+            "explanation": "st.line_chart 可以快速把數值資料畫成折線圖，適合先做基礎趨勢展示，不需要額外撰寫太多繪圖程式碼。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出將 DataFrame 變數 df 顯示在畫面上的程式碼。",
+          "answers": [
+            "st.dataframe(df)",
+            "st.write(df)"
+          ],
+          "hint": "最常見的是 st.dataframe。"
+        }
+      },
+      {
+        "id": "layout-sidebar-basics",
+        "title": "側邊欄與簡單版面配置",
+        "content": "當功能變多時，畫面很容易變得雜亂，因此 Streamlit 提供 st.sidebar 與 st.columns 等工具來整理版面。側邊欄很適合放篩選條件、模型參數與控制選項，讓主畫面保留給結果展示。若想讓資料並排顯示，可以用 st.columns 建立多欄區域，把圖表、指標或說明分開放置。雖然 Streamlit 不是傳統前端框架，但它已經提供足夠的版面能力，讓你做出結構清楚、操作順手的資料應用。初學者只要先掌握側邊欄與分欄，就能明顯改善介面品質。",
+        "highlights": [
+          {
+            "keyword": "st.sidebar",
+            "explanation": "st.sidebar 是頁面左側的獨立區域，常用來放查詢條件、控制開關與參數設定，讓主畫面更清楚。"
+          },
+          {
+            "keyword": "st.columns",
+            "explanation": "st.columns 可以把畫面切成多個欄位，適合把圖表、指標卡片與表格並排呈現，提升閱讀性。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出在側邊欄建立一個標籤為「關鍵字」的文字輸入框程式碼。",
+          "answers": [
+            "st.sidebar.text_input(\"關鍵字\")",
+            "st.sidebar.text_input('關鍵字')"
+          ],
+          "hint": "使用 st.sidebar 後再接 text_input。"
+        }
+      }
+    ],
+    "intermediate": [
+      {
+        "id": "session-state-basics",
+        "title": "理解重新執行與狀態保存",
+        "content": "Streamlit 的執行模式和一般後端框架不同。每當使用者操作一次元件，整個腳本通常都會重新執行，因此如果沒有額外處理，前一次操作得到的資料可能會消失。這就是為什麼 st.session_state 很重要，它能幫你在不同互動之間保存狀態，例如查詢條件、計數器、已上傳檔案資訊或中間結果。只要理解「頁面會重跑，但狀態可以保留」這件事，你就能開始設計較複雜的流程，例如多步驟表單、聊天介面或需要記憶前一次操作結果的工具。",
+        "highlights": [
+          {
+            "keyword": "st.session_state",
+            "explanation": "st.session_state 是用來保存頁面狀態的容器，能在多次互動重新執行之間記住變數值，是進階應用的重要基礎。"
+          },
+          {
+            "keyword": "重新執行",
+            "explanation": "重新執行是指使用者每次操作元件後，Streamlit 會由上到下再跑一次整份腳本，因此需要狀態機制避免資料遺失。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出把 session_state 中的 count 設定為 1 的程式碼。",
+          "answers": [
+            "st.session_state[\"count\"] = 1",
+            "st.session_state['count'] = 1"
+          ],
+          "hint": "把它當成字典來設定。"
+        }
+      },
+      {
+        "id": "caching-and-performance",
+        "title": "使用快取提升效能",
+        "content": "當應用需要讀取大型資料、呼叫 API、載入模型或執行較慢的計算時，若每次互動都重新執行，畫面就會變得很慢。Streamlit 提供快取機制來減少重複工作，常見的有 @st.cache_data 與 @st.cache_resource。前者適合快取資料處理結果，例如查詢資料庫、讀取 CSV、整理 DataFrame；後者則適合快取較長生命週期的資源，例如模型、資料庫連線或外部服務物件。學會合理快取後，可以讓應用速度更穩定，也能降低不必要的系統負擔。",
+        "highlights": [
+          {
+            "keyword": "@st.cache_data",
+            "explanation": "@st.cache_data 用來快取函式回傳的資料結果，常見於資料查詢、轉換與整理流程，可避免每次互動都重算。"
+          },
+          {
+            "keyword": "@st.cache_resource",
+            "explanation": "@st.cache_resource 適合快取模型、連線或大型資源，避免在每次重新執行時反覆建立相同物件。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出最基本的資料快取裝飾器語法。",
+          "answers": [
+            "@st.cache_data"
+          ],
+          "hint": "這是一個加在函式上方的 decorator。"
+        }
+      },
+      {
+        "id": "file-upload-and-processing",
+        "title": "檔案上傳與資料處理流程",
+        "content": "許多 Streamlit 應用都會讓使用者上傳檔案，例如 CSV、Excel、圖片或 PDF。你可以透過 st.file_uploader 建立上傳元件，接著再用 pandas、PIL 或其他 Python 套件處理這些內容。這個能力非常適合做資料分析工具、文件檢視器或模型預測介面。實務上要注意的是，檔案上傳只是入口，真正有價值的是後續的資料解析、格式檢查、錯誤提示與結果展示。也就是說，除了元件本身，你還要思考整體的處理流程與使用者體驗。",
+        "highlights": [
+          {
+            "keyword": "st.file_uploader",
+            "explanation": "st.file_uploader 可建立檔案上傳元件，支援限制副檔名與接收上傳檔案物件，是資料應用常見入口。"
+          },
+          {
+            "keyword": "pandas",
+            "explanation": "pandas 常與 Streamlit 搭配使用，能把上傳的 CSV 或 Excel 轉成 DataFrame，再進一步篩選、分析與展示。"
+          }
+        ],
+        "practice": {
+          "type": "code",
+          "prompt": "請寫出建立只接受 csv 檔案的上傳元件程式碼。",
+          "answers": [
+            "st.file_uploader(\"上傳 CSV\", type=[\"csv\"])",
+            "st.file_uploader('上傳 CSV', type=['csv'])"
+          ],
+          "hint": "使用 st.file_uploader，並指定 type。"
+        }
+      },
+      {
+        "id": "forms-and-user-flow",
+        "title": "表單與操作流程設計",
+        "content": "如果頁面上有很多輸入元件，使用者每改一次值都重新執行腳本，可能會造成流程混亂。這時可以使用 st.form 把多個欄位包成一組，等到使用者按下送出後再一起處理。這種做法很適合查詢條件輸入、參數設定或建立資料提交流程。從學習角度來看，這一步很重要，因為它讓你開始從「單一元件展示」進入「完整使用者流程設計」。你不只是把功能堆上去，而是開始思考操作順序、回饋時機與畫面清晰度。",
+        "highlights": [
+          {
+            "keyword": "st.form",
+            "explanation": "st.form 可把多個輸入元件包成一組，只有在提交時才會一起處理，能避免每次修改欄位都觸發重跑。"
+          },
+          {
+            "keyword": "送出",
+            "explanation": "送出通常代表使用者確認目前所有輸入內容後，才讓程式統一執行查詢、計算或預測，流程會更穩定。"
+          }
+        ],
+        "practice": {
+          "type": "action",
+          "prompt": "請列出設計 Streamlit 表單流程時應注意的具體做法。",
+          "items": [
+            "把相關輸入欄位集中放入同一個表單",
+            "只在按下送出後才執行查詢或計算",
+            "在送出後提供成功或錯誤提示",
+            "把結果區與輸入區清楚分開",
+            "避免讓過多元件同時散落在主畫面"
+          ]
+        }
+      },
+      {
+        "id": "deployment-and-structure",
+        "title": "部署與專案結構觀念",
+        "content": "當 Streamlit 應用從個人練習進入團隊使用時，就需要考慮部署與專案整理。你可以把程式拆成主頁、工具模組、資料處理函式與設定檔，避免所有邏輯都擠在單一 app.py 中。部署方面，常見做法包含使用 Streamlit Community Cloud、Linux 伺服器、Docker 容器，或與反向代理服務搭配。若應用會連接資料庫、模型或內部 API，還要注意環境變數與權限管理。這些觀念雖然超出入門畫面操作，但卻是把 Streamlit 真正用在實務上的關鍵一步。",
+        "highlights": [
+          {
+            "keyword": "Docker",
+            "explanation": "Docker 可把 Streamlit 應用與依賴環境一起打包，讓部署更穩定，也方便在不同主機上重現相同行為。"
+          },
+          {
+            "keyword": "環境變數",
+            "explanation": "環境變數通常用來保存資料庫連線、API 金鑰與設定值，可避免把敏感資訊直接寫死在程式碼中。"
+          }
+        ],
+        "practice": {
+          "type": "action",
+          "prompt": "請列出把 Streamlit 應用整理成可部署專案時的具體做法。",
+          "items": [
+            "將資料處理邏輯抽成獨立函式或模組",
+            "把敏感設定改由環境變數管理",
+            "整理 requirements.txt 或 pyproject 設定",
+            "加入 Dockerfile 或部署腳本",
+            "把頁面輸入、商業邏輯與輸出區分清楚"
+          ]
+        }
+      }
+    ],
+    "advanced": []
+  }
+}

@@ -1,5 +1,6 @@
 import http, { createServer } from 'http'
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { createHash } from 'crypto'
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync, unlinkSync } from 'fs'
 import { join, extname, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -24,6 +25,18 @@ const MIME = {
 
 /* ── Links helpers ── */
 
+function computeEtag(str) {
+  return createHash('md5').update(str).digest('hex').slice(0, 8)
+}
+
+let linksEtag = (() => {
+  try {
+    if (existsSync(DATA_FILE))    return computeEtag(readFileSync(DATA_FILE, 'utf-8'))
+    if (existsSync(DEFAULT_FILE)) return computeEtag(readFileSync(DEFAULT_FILE, 'utf-8'))
+  } catch {}
+  return computeEtag('[]')
+})()
+
 function readLinks() {
   if (existsSync(DATA_FILE)) return JSON.parse(readFileSync(DATA_FILE, 'utf-8'))
   if (existsSync(DEFAULT_FILE)) return JSON.parse(readFileSync(DEFAULT_FILE, 'utf-8'))
@@ -32,7 +45,9 @@ function readLinks() {
 
 function writeLinks(data) {
   mkdirSync(dirname(DATA_FILE), { recursive: true })
-  writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8')
+  const content = JSON.stringify(data, null, 2)
+  writeFileSync(DATA_FILE, content, 'utf-8')
+  linksEtag = computeEtag(content)
 }
 
 /* ── Python TTS proxy helpers ── */
@@ -70,7 +85,7 @@ createServer(async (req, res) => {
   /* ── Links API ── */
 
   if (req.url === '/api/links' && req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.writeHead(200, { 'Content-Type': 'application/json', 'ETag': `"${linksEtag}"` })
     res.end(JSON.stringify(readLinks()))
     return
   }
@@ -79,10 +94,107 @@ createServer(async (req, res) => {
     let body = ''
     req.on('data', chunk => body += chunk)
     req.on('end', () => {
+      const clientEtag = (req.headers['if-match'] ?? '').replace(/"/g, '')
+      if (clientEtag && clientEtag !== linksEtag) {
+        res.writeHead(409, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'conflict' }))
+        return
+      }
       writeLinks(JSON.parse(body))
-      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.writeHead(200, { 'Content-Type': 'application/json', 'ETag': `"${linksEtag}"` })
       res.end('{"ok":true}')
     })
+    return
+  }
+
+  /* ── Learner API ── */
+
+  const LEARNER_DIR = join(__dirname, 'data', 'learner')
+
+  if (req.url === '/api/learner' && req.method === 'GET') {
+    try {
+      if (!existsSync(LEARNER_DIR)) {
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end('[]')
+        return
+      }
+      const files = readdirSync(LEARNER_DIR).filter(f => f.endsWith('.json') && !f.endsWith('.backup.json'))
+      const topics = files.map(f => {
+        try {
+          const data = JSON.parse(readFileSync(join(LEARNER_DIR, f), 'utf-8'))
+          return { id: data.id, name: data.name, description: data.description }
+        } catch { return null }
+      }).filter(Boolean)
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify(topics))
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end('[]')
+    }
+    return
+  }
+
+  if (req.url.startsWith('/api/learner/') && req.method === 'GET') {
+    const id = req.url.slice('/api/learner/'.length).replace(/[^a-zA-Z0-9_-]/g, '')
+    const file = join(LEARNER_DIR, `${id}.json`)
+    if (!id || !existsSync(file)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Not found' }))
+      return
+    }
+    try {
+      const content = readFileSync(file, 'utf-8')
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(content)
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Read error' }))
+    }
+    return
+  }
+
+  if (req.url === '/api/learner' && req.method === 'POST') {
+    let body = ''
+    req.on('data', chunk => body += chunk)
+    req.on('end', () => {
+      try {
+        const data = JSON.parse(body)
+        const id = (data.id ?? '').replace(/[^a-zA-Z0-9_-]/g, '')
+        if (!id || !data.name || !data.levels) {
+          res.writeHead(400, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ error: 'Missing required fields: id, name, levels' }))
+          return
+        }
+        mkdirSync(LEARNER_DIR, { recursive: true })
+        const targetFile = join(LEARNER_DIR, `${id}.json`)
+        const content = JSON.stringify(data, null, 2)
+        writeFileSync(targetFile, content, 'utf-8')
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ ok: true, id }))
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Invalid JSON' }))
+      }
+    })
+    return
+  }
+
+  if (req.url.startsWith('/api/learner/') && req.method === 'DELETE') {
+    const id = req.url.slice('/api/learner/'.length).replace(/[^a-zA-Z0-9_-]/g, '')
+    const file = join(LEARNER_DIR, `${id}.json`)
+    if (!id || !existsSync(file)) {
+      res.writeHead(404, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Not found' }))
+      return
+    }
+    try {
+      unlinkSync(file)
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ ok: true }))
+    } catch {
+      res.writeHead(500, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Delete failed' }))
+    }
     return
   }
 

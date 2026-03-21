@@ -18,6 +18,18 @@ const NAV_ITEMS: NavItem[] = [
     description: '串接 OpenAI API，進行智慧問答對話，支援多輪上下文。',
     page: 'chat',
   },
+  {
+    index: '03',
+    name: '民國人物傳',
+    description: '胡適、魯迅、傅斯年——民國思想巨擘的生平與著述。',
+    page: 'celebrity',
+  },
+  {
+    index: '04',
+    name: '學習者',
+    description: '以主題為單位的互動式學習，支援程式練習與行動建議。',
+    page: 'learner',
+  },
 ]
 
 function SunIcon() {

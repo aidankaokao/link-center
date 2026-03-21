@@ -153,10 +153,11 @@
 /* ── Cards Grid ── */
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 270px));
+  justify-content: center;
   gap: 20px;
   width: 100%;
-  max-width: 680px;
+  max-width: 1200px;
 }
 
 /* ── Card ── */

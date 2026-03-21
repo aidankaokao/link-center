@@ -18,21 +18,33 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 
 ## 架構說明
 
-**路由** — 使用 `react-router-dom` v6 的 `BrowserRouter`。`App.tsx` 內部的 `AppRoutes` 元件定義所有路由，頁面對應如下：`/` → Home、`/link` → Link、`/chat` → Chat、`/tts` → Tts。頁面切換使用 `useNavigate`，子頁面返回首頁透過 `onBack` prop 傳入 `() => navigate('/')`。
+**路由** — 使用 `react-router-dom` v6 的 `BrowserRouter`。`App.tsx` 內部的 `AppRoutes` 元件定義所有路由，頁面對應如下：`/` → Home、`/link` → Link、`/chat` → Chat、`/tts` → Tts、`/celebrity` → Celebrity、`/learner` → Learner。頁面切換使用 `useNavigate`，子頁面返回首頁透過 `onBack` prop 傳入 `() => navigate('/')`。
 
-**跨頁狀態** — `App.tsx` 同時持有 `root: TreeItem[]`，即 `Link.tsx` 的完整連結／資料夾樹狀結構，這是唯一提升至 App 層的狀態。`Chat.tsx` 與 `Tts.tsx` 的所有狀態均由元件自身管理。
+**跨頁狀態** — `App.tsx` 持有以下提升至 App 層的狀態：
+- `root: TreeItem[]` — `Link.tsx` 的完整連結／資料夾樹狀結構
+- `linksEtag: useRef<string>` — 目前 links.json 的 ETag，用於樂觀鎖並發控制
+- `linkConflict: boolean` — 發生 409 衝突時顯示 toast 通知（5 秒後自動消失）
+
+其餘頁面（`Chat.tsx`、`Tts.tsx` 等）的所有狀態均由元件自身管理。
 
 **各頁說明**
 
 | 檔案 | 功能 |
 |---|---|
-| `Home.tsx` | 卡片式導覽頁。`NAV_ITEMS` 陣列驅動卡片格線：帶有 `page` 屬性（路由路徑字串）的項目執行內部導航（`useNavigate`），帶有 `href` 的項目開啟外部連結，帶有 `disabled` 的項目顯示為 Coming Soon。目前卡片：01 頁面連結、02 LLM 問答。（TTS 卡片已暫時移除，`Tts.tsx` 保留備用） |
+| `Home.tsx` | 卡片式導覽頁。`NAV_ITEMS` 陣列驅動卡片格線（`auto-fit minmax(230px,270px)` + `justify-content:center`，`max-width:1200px`）：帶有 `page` 屬性（路由路徑字串）的項目執行內部導航（`useNavigate`），帶有 `href` 的項目開啟外部連結，帶有 `disabled` 的項目顯示為 Coming Soon。目前卡片：01 頁面連結（hardcoded）、02 LLM 問答、03 民國人物傳、04 學習者。（TTS 卡片已暫時移除，`Tts.tsx` 保留備用） |
 | `Link.tsx` | 階層式連結管理頁，頁面標題「頁面連結」。使用遞迴的 `TreeItem`（`LinkItem` / `FolderItem` 的辨別聯合型別）樹狀結構。`FolderItem` 支援可選 `password?: string` 欄位；有密碼的資料夾在進入、編輯、刪除時會彈出密碼驗證 modal，卡片右下角顯示鎖頭圖示。五個純函式 tree helpers（`treeAdd`、`treeUpdate`、`treeDelete`、`getChildrenAtPath`、`buildBreadcrumbs`）定義於元件外部。樹內導航使用 `navPath: string[]`（從根節點到當前資料夾的 ID 陣列）。 |
 | `Chat.tsx` | OpenAI 問答介面。透過 SSE 串流呼叫 `gpt-4o-mini`。支援圖片（base64 vision）與 PDF（使用 `pdfjs-dist` 在 client 端提取文字）作為問答上下文。支援匯出 markdown 表格為 CSV。 |
 | `Tts.tsx` | 中文文字轉語音頁面（暫未掛載於首頁）。左側 sidebar 顯示模型狀態與聲線選單（可收折），主區域含文字輸入卡（支援上傳 `.txt`）與語音輸出卡（HTML5 audio player + 下載 WAV）。透過輪詢 `/api/tts/status` 等待模型就緒。 |
+| `Celebrity.tsx` | 民國人物傳頁面（`/celebrity`）。人物資料存於 `src/data/celebrities.json`，開發者可自行新增人物。左側浮動人物選擇器（金色邊框按鈕，mask 漸消邊界），右側時間軸隨捲動高亮對應節點並可點擊跳轉，主畫面各生平段落以 IntersectionObserver 觸發進場動效（Apple 式滾動）。預設每 3 秒自動推進下一段落，右上角有 Play/Pause 切換按鈕。亮色模式採多層金色暈散漸層背景 + 細纖維紋理。 |
+| `Learner.tsx` | 主題式互動學習頁面（`/learner`）。主題 JSON 存於 `data/learner/{id}.json`，server 動態讀取，無需重啟即可新增主題。左側 sidebar 列出主題清單，右側主區顯示 hero、level tabs（初階／進階／高階）、各段落內容。段落支援：可點擊高亮關鍵詞（浮動 popover 說明）、程式練習（輸入批改 + 提示 + 答錯後出現「查看答案」按鈕）、行動建議清單。右上角控制列：文字大小切換（小／中／大）、**匯出主題 PDF**（印表機 icon，選中主題時才顯示，輸出所有層級的帶樣式 HTML，`window.print()` 觸發列印）、管理面板（⚙）、主題切換。右下角浮動聊天按鈕（Chat FAB）展開 LLM 問答面板（360×600px 懸浮卡片，SSE 串流，AI 回覆以 `react-markdown + remark-gfm` 渲染 markdown，聊天記錄有內容時 header 出現**匯出問答 PDF** 按鈕，跨主題切換時保留各主題獨立對話記錄），聊天輸入框支援中文 IME（`isComposing` 防誤送）。亮色模式使用者泡泡改為淡金色底（`rgba(200,169,110,0.18)`）以提升可讀性。管理面板（⚙）提供：LLM 設定（OpenAI API Key + Temperature，僅存於記憶體）、貼上 LLM 生成 JSON 匯入主題、Prompt 生成器（輸入主題名稱後複製填好的 prompt）、各主題的下載 JSON 與刪除（刪除需輸入 `DELETE` 確認）。 |
 
 **後端（server.js）** — Node.js 內建 HTTP server（無 express），ESM。除了服務靜態檔案外，提供：
-- `GET/POST /api/links` — 讀寫 `data/links.json`（Docker volume 持久化）
+- `GET /api/links` — 讀取 `data/links.json`，回應帶 `ETag` header（MD5 hash 前 8 碼）
+- `POST /api/links` — 寫入 `data/links.json`；若請求帶 `If-Match` 且版本不符回 409（樂觀鎖並發控制），成功後回應新 `ETag`
+- `GET /api/learner` — 列出 `data/learner/` 目錄下所有主題（過濾 `.backup.json`，回傳 `[{ id, name, description }]`）
+- `GET /api/learner/:id` — 讀取特定主題完整 JSON
+- `POST /api/learner` — 接收完整主題 JSON，寫入 `data/learner/{id}.json`（id 欄位必須存在且合法，覆寫時直接取代，無備份）
+- `DELETE /api/learner/:id` — 刪除 `data/learner/{id}.json`
 - `GET /api/tts/status` — proxy 至 Python TTS API `/health`，回傳 `{ ready, initializing, error }`
 - `GET /api/tts/speakers` — proxy 至 Python TTS API `/speakers`，回傳聲線列表
 - `POST /api/tts` — proxy 至 Python TTS API `/tts`，接收 `{ text, speakerId }`，回傳 WAV binary
@@ -44,7 +56,11 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 - `GET /speakers` → `[{ id, name }]`
 - `POST /tts` body: `{ text, speaker_id, speed, format }` → WAV binary
 
-**主題切換** — 每個頁面各自管理 `isDark` 布林值，由固定位置的按鈕切換。深色／亮色類別（`.home-root.light`、`.link-root.light`、`.chat-root.light`、`.tts-root.light`）會覆寫各元件根元素上定義的 CSS 變數。字型：`Noto Sans TC`、`Cormorant Garamond`、`DM Mono`，透過 Google Fonts 載入（定義於 `index.html`）。
+**主題切換** — 每個頁面各自管理 `isDark` 布林值，由固定位置的按鈕切換。深色／亮色類別（`.home-root.light`、`.link-root.light`、`.chat-root.light`、`.tts-root.light`、`.cb-root.light`、`.lr-root.light`）會覆寫各元件根元素上定義的 CSS 變數。字型：`Noto Sans TC`、`Cormorant Garamond`、`DM Mono`，透過 Google Fonts 載入（定義於 `index.html`）。
+
+**人物資料擴充（Celebrity）** — 在 `src/data/celebrities.json` 中新增一個物件（格式：`id`、`name`、`dates`、`tagline`、`periods[]`），頁面會自動渲染新人物的選擇按鈕與生平內容，無需修改任何程式碼。每個 `period` 含 `id`、`years`、`title`、`content`、`works[]`（可為空陣列）。
+
+**學習主題擴充（Learner）** — 在 `data/learner/` 目錄放入符合格式的 JSON 檔案，頁面重新整理後即自動出現新主題，無需修改程式碼。JSON 格式：`{ id, name, description, levels: { beginner?, intermediate?, advanced? } }`，每個 level 為 section 陣列（`{ id, title, content, highlights?, practice? }`）。`practice.type` 為 `"code"`（程式輸入批改；答錯後顯示「查看答案」按鈕，展開 `lr-answer-reveal` 顯示參考答案）或 `"action"`（行動建議清單）。也可透過管理面板（⚙）直接貼上 JSON 匯入，或使用內建 Prompt 生成器讓 LLM 產生符合格式的主題檔案。
 
 ## 介面風格基準
 
@@ -73,7 +89,7 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 
 ### 背景漸層
 
-所有頁面使用相同的背景：
+大多數頁面使用相同的背景：
 
 ```css
 /* 深色 */
@@ -82,11 +98,21 @@ background:
   radial-gradient(ellipse 55% 45% at 85% 88%, rgba(20,60,150,0.15) 0%, transparent 55%),
   linear-gradient(160deg, #0b1f40 0%, #050d1c 50%, #091528 100%);
 
-/* 亮色 */
+/* 亮色（標準） */
 background:
   radial-gradient(ellipse 70% 50% at 15% 10%, rgba(100,160,255,0.18) 0%, transparent 60%),
   radial-gradient(ellipse 55% 45% at 85% 88%, rgba(60,120,220,0.10) 0%, transparent 55%),
   linear-gradient(160deg, #ddeaff 0%, #eef3fb 50%, #d8e8ff 100%);
+```
+
+**例外**：`Learner.tsx` 亮色背景採金色／白色漸層（與其他頁面不同）：
+
+```css
+/* Learner 亮色 */
+background:
+  radial-gradient(ellipse 70% 50% at 15% 10%, rgba(200,169,110,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 55% 45% at 85% 88%, rgba(154,111,48,0.12) 0%, transparent 55%),
+  linear-gradient(160deg, #fdf6e8 0%, #ffffff 50%, #faf2e0 100%);
 ```
 
 ### 字型
@@ -269,6 +295,18 @@ docker-compose down
 
 | 本機路徑 | 容器路徑 | 用途 |
 |---|---|---|
-| `./data/` | `/app/data/` | links.json（連結樹資料） |
+| `./data/` | `/app/data/` | links.json（連結樹資料）、learner/（學習主題 JSON） |
 
 遷移時搬運 `data/` 目錄即可無痛移植。
+
+**PostgreSQL**
+
+`docker-compose.yaml` 內含 `postgres:15` 服務，供後續有關聯式資料需求的頁面使用：
+
+| 項目 | 值 |
+|---|---|
+| container_name | `link-center-postgres` |
+| user / password / db | `filecenter` / `Fc2026PgLc!` / `filecenter` |
+| volume | `link-center-postgres-vol`（named volume，持久化） |
+| ports | 無對外 port，僅容器內部可達 |
+| 連線 hostname | `postgres`（同 compose 預設 bridge network） |
