@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1",
+    "type": "link",
+    "name": "Google",
+    "description": "全球最大的搜尋引擎，提供網頁搜尋、地圖、新聞等綜合服務。",
+    "href": "https://google.com"
+  },
+  {
+    "id": "1774061662511",
+    "type": "folder",
+    "name": "Aidan",
+    "description": "Aidan Repository",
+    "children": [
+      {
+        "id": "1774061690643",
+        "type": "link",
+        "name": "github",
+        "description": "",
+        "href": "https://github.com"
+      }
+    ]
+  }
+]
