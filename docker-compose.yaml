@@ -1,6 +1,6 @@
 services:
-  file-center:
-    image: file-center:latest
+  link-center:
+    image: link-center:latest
     ports:
       - "${UI_PORT:-3000}:3000"
     volumes:

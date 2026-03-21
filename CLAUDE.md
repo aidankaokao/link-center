@@ -43,7 +43,7 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 
 **建置 Docker image**
 ```bash
-docker build -t file-center:latest .
+docker build -t link-center:latest .
 ```
 
 **設定 port**（編輯 `.env`）
