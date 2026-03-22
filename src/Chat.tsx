@@ -1,6 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { toPng } from 'html-to-image'
+import { useAuth, reportTokens } from './AuthContext'
+import AuthUserIcon from './AuthUserIcon'
+import TokenToast from './TokenToast'
 import './Chat.css'
 
 /* ─────────────────────────────────────────────
@@ -15,9 +19,9 @@ interface Message {
 
 interface UploadedFile {
   name: string
-  type: 'image' | 'pdf'
-  content: string    // image: base64 (no data: prefix); pdf: extracted plain text
-  mimeType?: string  // image only
+  type: 'image'
+  content: string    // base64 (no data: prefix)
+  mimeType: string
 }
 
 type LlmProvider = 'openai' | 'gemini' | 'ollama'
@@ -90,20 +94,6 @@ function readFileAsBase64(file: File): Promise<string> {
   })
 }
 
-async function extractPdfText(file: File): Promise<string> {
-  const pdfjs = await import('pdfjs-dist')
-  const { default: workerSrc } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
-  pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
-  const arrayBuffer = await file.arrayBuffer()
-  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
-  const pages: string[] = []
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i)
-    const textContent = await page.getTextContent()
-    pages.push(textContent.items.map((item: any) => ('str' in item ? item.str : '')).join(' '))
-  }
-  return pages.join('\n\n')
-}
 
 /* ─────────────────────────────────────────────
    Icons
@@ -226,6 +216,33 @@ function XIcon() {
   )
 }
 
+function CopyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  )
+}
+
+function ImageDownloadIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+      <circle cx="8.5" cy="8.5" r="1.5" />
+      <polyline points="21 15 16 10 5 21" />
+    </svg>
+  )
+}
+
 function ImageFileIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -236,17 +253,6 @@ function ImageFileIcon() {
   )
 }
 
-function PdfFileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="9" y1="13" x2="15" y2="13" />
-      <line x1="9" y1="17" x2="15" y2="17" />
-      <line x1="9" y1="9"  x2="11" y2="9"  />
-    </svg>
-  )
-}
 
 function KeyIcon() {
   return (
@@ -265,6 +271,7 @@ interface Props {
 }
 
 export default function Chat({ onBack }: Props) {
+  const { user } = useAuth()
   const [isDark, setIsDark] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [llmProvider, setLlmProvider] = useState<LlmProvider>('openai')
@@ -278,6 +285,8 @@ export default function Chat({ onBack }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [uploadedFile, setUploadedFile] = useState<UploadedFile | null>(null)
   const [processingFile, setProcessingFile] = useState(false)
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null)
+  const [tokenToast, setTokenToast] = useState<{ provider: string; tokens: number } | null>(null)
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -364,6 +373,7 @@ export default function Chat({ onBack }: Props) {
     const assistantId = (Date.now() + 1).toString()
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
 
+    let lastTokenCount = 0
     try {
       if (llmProvider === 'openai' || llmProvider === 'gemini') {
         const endpoint = llmProvider === 'openai'
@@ -373,12 +383,6 @@ export default function Chat({ onBack }: Props) {
         const apiKey = llmProvider === 'openai' ? llmSaved.openai.apiKey : llmSaved.gemini.apiKey
 
         const builtMessages: any[] = []
-        if (uploadedFile?.type === 'pdf') {
-          builtMessages.push({
-            role: 'system',
-            content: `以下是使用者上傳的文件「${uploadedFile.name}」，請根據此文件內容回答問題：\n\n${uploadedFile.content}`,
-          })
-        }
         updatedMessages.forEach((m, i) => {
           const isLastUser = i === updatedMessages.length - 1 && m.role === 'user'
           if (isLastUser && uploadedFile?.type === 'image') {
@@ -397,7 +401,7 @@ export default function Chat({ onBack }: Props) {
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-          body: JSON.stringify({ model, messages: builtMessages, stream: true }),
+          body: JSON.stringify({ model, messages: builtMessages, stream: true, stream_options: { include_usage: true } }),
         })
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}))
@@ -420,18 +424,14 @@ export default function Chat({ onBack }: Props) {
               const delta = parsed.choices?.[0]?.delta?.content ?? ''
               accumulated += delta
               setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulated } : m))
+              const usageTokens = parsed.usage?.total_tokens ?? 0
+              if (usageTokens > 0) lastTokenCount = usageTokens
             } catch { /* skip malformed chunks */ }
           }
         }
       } else {
         // Ollama — NDJSON streaming
         const ollamaMessages: any[] = []
-        if (uploadedFile?.type === 'pdf') {
-          ollamaMessages.push({
-            role: 'system',
-            content: `以下是使用者上傳的文件「${uploadedFile.name}」，請根據此文件內容回答問題：\n\n${uploadedFile.content}`,
-          })
-        }
         updatedMessages.forEach((m, i) => {
           const isLastUser = i === updatedMessages.length - 1 && m.role === 'user'
           if (isLastUser && uploadedFile?.type === 'image') {
@@ -471,6 +471,10 @@ export default function Chat({ onBack }: Props) {
                 accumulated += delta
                 setMessages(prev => prev.map(m => m.id === assistantId ? { ...m, content: accumulated } : m))
               }
+              if (obj.done) {
+                const ollamaTokens = (obj.prompt_eval_count ?? 0) + (obj.eval_count ?? 0)
+                if (ollamaTokens > 0) lastTokenCount = ollamaTokens
+              }
             } catch { /* ignore */ }
           }
         }
@@ -481,6 +485,10 @@ export default function Chat({ onBack }: Props) {
       setMessages(prev => prev.filter(m => m.id !== assistantId))
     } finally {
       setLoading(false)
+      if (lastTokenCount > 0) {
+        reportTokens(user, llmProvider, lastTokenCount)
+        setTokenToast({ provider: llmProvider, tokens: lastTokenCount })
+      }
     }
   }
 
@@ -491,21 +499,37 @@ export default function Chat({ onBack }: Props) {
     }
   }
 
+  async function handleCopy(msgId: string, content: string) {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMsgId(msgId)
+      setTimeout(() => setCopiedMsgId(id => id === msgId ? null : id), 2000)
+    } catch { /* ignore */ }
+  }
+
+  async function handleDownloadPng(msgId: string) {
+    const bubbleEl = document.querySelector<HTMLElement>(`[data-msg-id="${msgId}"] .chat-msg-bubble`)
+    if (!bubbleEl) return
+    try {
+      const dataUrl = await toPng(bubbleEl, { pixelRatio: 2 })
+      const a = document.createElement('a')
+      a.href = dataUrl
+      a.download = `table-${msgId}.png`
+      a.click()
+    } catch { /* ignore */ }
+  }
+
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
     setProcessingFile(true)
     setError(null)
     try {
-      if (file.type.startsWith('image/')) {
-        const base64 = await readFileAsBase64(file)
-        setUploadedFile({ name: file.name, type: 'image', content: base64, mimeType: file.type })
-      } else if (file.type === 'application/pdf') {
-        const text = await extractPdfText(file)
-        setUploadedFile({ name: file.name, type: 'pdf', content: text })
-      }
-    } catch {
-      setError('檔案讀取失敗，請確認格式是否正確。')
+      const base64 = await readFileAsBase64(file)
+      setUploadedFile({ name: file.name, type: 'image', content: base64, mimeType: file.type })
+    } catch (e) {
+      const detail = e instanceof Error ? e.message : String(e)
+      setError(`圖片讀取失敗：${detail}`)
     } finally {
       setProcessingFile(false)
       e.target.value = ''
@@ -514,13 +538,14 @@ export default function Chat({ onBack }: Props) {
 
   /* ── Render ── */
   return (
+    <>
     <div className={`chat-root${isDark ? '' : ' light'}`}>
 
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+        accept="image/png,image/jpeg,image/webp,image/gif"
         style={{ display: 'none' }}
         onChange={handleFileSelect}
       />
@@ -658,6 +683,7 @@ export default function Chat({ onBack }: Props) {
             <button className="chat-ctrl-btn" onClick={onBack} aria-label="返回首頁">
               <HomeIcon />
             </button>
+            <AuthUserIcon />
           </div>
         </div>
 
@@ -682,7 +708,7 @@ export default function Chat({ onBack }: Props) {
           )}
 
           {messages.map(msg => (
-            <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
+            <div key={msg.id} data-msg-id={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
               <div className="chat-msg-avatar">
                 {msg.role === 'assistant' ? <BotIcon /> : <UserIcon />}
               </div>
@@ -692,15 +718,32 @@ export default function Chat({ onBack }: Props) {
                   : <span className="chat-typing"><span /><span /><span /></span>
                 }
               </div>
-              {msg.role === 'assistant' && msg.content && hasMarkdownTable(msg.content) && (
-                <button
-                  className="chat-export-btn"
-                  onClick={() => downloadAsCsv(msg.content, msg.id)}
-                  title="匯出表格為 CSV"
-                  aria-label="匯出表格為 CSV"
-                >
-                  <DownloadCsvIcon />
-                </button>
+              {msg.role === 'assistant' && msg.content && (
+                <div className="chat-msg-actions">
+                  <button
+                    className={`chat-action-btn${copiedMsgId === msg.id ? ' chat-action-btn--copied' : ''}`}
+                    onClick={() => handleCopy(msg.id, msg.content)}
+                    title="複製內容"
+                  >
+                    {copiedMsgId === msg.id ? <CheckIcon /> : <CopyIcon />}
+                  </button>
+                  {hasMarkdownTable(msg.content) && (<>
+                    <button
+                      className="chat-action-btn"
+                      onClick={() => handleDownloadPng(msg.id)}
+                      title="下載表格為 PNG"
+                    >
+                      <ImageDownloadIcon />
+                    </button>
+                    <button
+                      className="chat-action-btn"
+                      onClick={() => downloadAsCsv(msg.content, msg.id)}
+                      title="匯出表格為 CSV"
+                    >
+                      <DownloadCsvIcon />
+                    </button>
+                  </>)}
+                </div>
               )}
             </div>
           ))}
@@ -718,24 +761,31 @@ export default function Chat({ onBack }: Props) {
         <div className="chat-input-area">
           {/* File badge */}
           {(uploadedFile || processingFile) && (
-            <div className="chat-file-badge">
-              {processingFile ? (
-                <>
-                  <span className="file-badge-spinner" />
-                  <span className="file-badge-name">處理中…</span>
-                </>
-              ) : (
-                <>
-                  {uploadedFile!.type === 'image' ? <ImageFileIcon /> : <PdfFileIcon />}
-                  <span className="file-badge-name">{uploadedFile!.name}</span>
-                  <button
-                    className="file-badge-remove"
-                    onClick={() => setUploadedFile(null)}
-                    aria-label="移除檔案"
-                  >
-                    <XIcon />
-                  </button>
-                </>
+            <div className="chat-file-badge-wrap">
+              <div className="chat-file-badge">
+                {processingFile ? (
+                  <>
+                    <span className="file-badge-spinner" />
+                    <span className="file-badge-name">處理中…</span>
+                  </>
+                ) : (
+                  <>
+                    <ImageFileIcon />
+                    <span className="file-badge-name">{uploadedFile!.name}</span>
+                    <button
+                      className="file-badge-remove"
+                      onClick={() => setUploadedFile(null)}
+                      aria-label="移除圖片"
+                    >
+                      <XIcon />
+                    </button>
+                  </>
+                )}
+              </div>
+              {uploadedFile && llmProvider === 'ollama' && (
+                <span className="chat-vision-hint">
+                  ⚠ Ollama 需使用支援視覺的模型（如 llava）才能分析圖片
+                </span>
               )}
             </div>
           )}
@@ -745,8 +795,8 @@ export default function Chat({ onBack }: Props) {
               className="input-action-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={!isLlmConfigured() || loading || processingFile}
-              aria-label="上傳圖片或 PDF"
-              title="上傳圖片或 PDF"
+              aria-label="上傳圖片"
+              title="上傳圖片"
             >
               <PaperclipIcon />
             </button>
@@ -760,7 +810,7 @@ export default function Chat({ onBack }: Props) {
               placeholder={
                 !isLlmConfigured()
                   ? (llmProvider === 'ollama' ? '請先設定 Ollama' : '請先設定 API Key') :
-                uploadedFile ? '根據已載入文件提問… (Enter 送出，Shift+Enter 換行)' :
+                uploadedFile ? '根據已上傳圖片提問… (Enter 送出，Shift+Enter 換行)' :
                 '輸入訊息… (Enter 送出，Shift+Enter 換行)'
               }
               disabled={!isLlmConfigured() || loading}
@@ -780,5 +830,9 @@ export default function Chat({ onBack }: Props) {
 
       </div>
     </div>
+    {tokenToast && (
+      <TokenToast provider={tokenToast.provider} tokens={tokenToast.tokens} onDone={() => setTokenToast(null)} />
+    )}
+    </>
   )
 }

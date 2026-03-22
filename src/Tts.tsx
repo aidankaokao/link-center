@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import AuthUserIcon from './AuthUserIcon'
 import './Tts.css'
 
 /* ─────────────────────────────────────────────
@@ -356,6 +357,7 @@ export default function Tts({ onBack }: Props) {
             <button className="tts-ctrl-btn" onClick={onBack} aria-label="返回首頁">
               <HomeIcon />
             </button>
+            <AuthUserIcon />
           </div>
         </div>
 

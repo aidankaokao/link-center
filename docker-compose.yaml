@@ -7,10 +7,14 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - PYTHON_TTS_URL=${PYTHON_TTS_URL:-http://host.docker.internal:14000}
+      - DATABASE_URL=postgresql://filecenter:Fc2026PgLc!@postgres:5432/filecenter
     volumes:
       - ./data:/app/data
       - ./models:/app/models
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     logging:
       driver: json-file
       options:
@@ -24,9 +28,16 @@ services:
       POSTGRES_USER: filecenter
       POSTGRES_PASSWORD: Fc2026PgLc!
       POSTGRES_DB: filecenter
+    ports:
+      - "5432:5432"
     volumes:
       - link-center-postgres-vol:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U filecenter -d filecenter"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     logging:
       driver: json-file
       options:

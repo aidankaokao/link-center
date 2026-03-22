@@ -6,6 +6,11 @@ import Chat from './Chat'
 import Tts from './Tts'
 import Celebrity from './Celebrity'
 import Learner from './Learner'
+import Ebook from './Ebook'
+import PaperDoc from './PaperDoc'
+import UserManage from './UserManage'
+import AdminManage from './AdminManage'
+import { AuthProvider } from './AuthContext'
 
 function AppRoutes() {
   const navigate = useNavigate()
@@ -63,6 +68,10 @@ function AppRoutes() {
         <Route path="/tts" element={<Tts onBack={goHome} />} />
         <Route path="/celebrity" element={<Celebrity onBack={goHome} />} />
         <Route path="/learner" element={<Learner onBack={goHome} />} />
+        <Route path="/ebook" element={<Ebook onBack={goHome} />} />
+        <Route path="/paper" element={<PaperDoc onBack={goHome} />} />
+        <Route path="/user-manage" element={<UserManage onBack={goHome} />} />
+        <Route path="/admin-manage" element={<AdminManage onBack={goHome} />} />
       </Routes>
       {linkConflict && (
         <div style={{
@@ -83,7 +92,9 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppRoutes />
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   )
 }

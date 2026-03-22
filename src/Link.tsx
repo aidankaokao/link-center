@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import AuthUserIcon from './AuthUserIcon'
 import './Link.css'
 
 /* ─────────────────────────────────────────────
@@ -417,6 +418,7 @@ export default function LinkPage({ root, onRootChange, onBack }: Props) {
         >
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
+        <AuthUserIcon />
       </div>
 
       <div className="link-layout">

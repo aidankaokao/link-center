@@ -742,19 +742,32 @@
 }
 
 /* ── File badge ── */
+.chat-file-badge-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  animation: fadeIn 0.2s ease both;
+}
+
 .chat-file-badge {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  margin-bottom: 8px;
   border-radius: 8px;
   background: var(--input-bg);
   border: 1px solid var(--input-border);
   font-size: 11px;
   color: var(--text);
-  animation: fadeIn 0.2s ease both;
   transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.chat-vision-hint {
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+  padding: 0 4px;
 }
 
 .chat-file-badge > svg { width: 14px; height: 14px; color: var(--gold); flex-shrink: 0; }
@@ -824,3 +837,45 @@
 }
 
 .chat-export-btn svg { width: 13px; height: 13px; }
+
+/* ── Message action buttons group ── */
+.chat-msg-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: flex-start;
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.chat-msg:hover .chat-msg-actions { opacity: 1; }
+
+.chat-action-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.chat-action-btn:hover {
+  color: var(--gold);
+  border-color: var(--gold-dim);
+  transform: scale(1.08);
+}
+
+.chat-action-btn--copied {
+  color: #4caf7d;
+  border-color: rgba(76, 175, 125, 0.4);
+}
+
+.chat-action-btn svg { width: 13px; height: 13px; }
+

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import AuthUserIcon from './AuthUserIcon'
 import './Celebrity.css'
 import celebritiesData from './data/celebrities.json'
 
@@ -247,6 +248,7 @@ export default function CelebrityPage({ onBack }: Props) {
         >
           {isDark ? <SunIcon /> : <MoonIcon />}
         </button>
+        <AuthUserIcon />
       </div>
 
       {/* Left: Person Selector */}

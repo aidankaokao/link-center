@@ -1,5 +1,9 @@
 {
   "name": "file-center-server",
   "version": "1.0.0",
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "pg": "^8.20.0",
+    "bcryptjs": "^3.0.3"
+  }
 }

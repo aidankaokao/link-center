@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useAuth, reportTokens } from './AuthContext'
+import AuthUserIcon from './AuthUserIcon'
+import TokenToast from './TokenToast'
 import './Learner.css'
 
 /* ─────────────────────────────────────────────
@@ -208,6 +211,7 @@ const LLM_INIT: LlmConfig = {
 interface Props { onBack: () => void }
 
 export default function Learner({ onBack }: Props) {
+  const { user } = useAuth()
   const [isDark, setIsDark] = useState(false)
   const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('md')
 
@@ -254,6 +258,7 @@ export default function Learner({ onBack }: Props) {
   const [chatLoading, setChatLoading] = useState(false)
   const [chatError, setChatError] = useState('')
   const [chatTopicId, setChatTopicId] = useState<string | null>(null)
+  const [tokenToast, setTokenToast] = useState<{ provider: string; tokens: number } | null>(null)
 
   const sectionRefs = useRef<Map<string, HTMLElement>>(new Map())
   const contentRef = useRef<HTMLDivElement>(null)
@@ -719,6 +724,7 @@ ${levelsHtml}
         const model = llmProvider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash'
         const apiKey = llmProvider === 'openai' ? llmSaved.openai.apiKey : llmSaved.gemini.apiKey
 
+        let lastTokenCount = 0
         const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -726,6 +732,7 @@ ${levelsHtml}
             model,
             stream: true,
             temperature: llmTemperature,
+            stream_options: { include_usage: true },
             messages: [{ role: 'system', content: systemPrompt }, ...allMessages],
           }),
         })
@@ -744,15 +751,23 @@ ${levelsHtml}
             const data = line.slice(6).trim()
             if (data === '[DONE]') break
             try {
-              const delta = JSON.parse(data).choices?.[0]?.delta?.content ?? ''
+              const parsed = JSON.parse(data)
+              const delta = parsed.choices?.[0]?.delta?.content ?? ''
               if (delta) setChatMessages(prev => prev.map(m =>
                 m.id === assistantId ? { ...m, content: m.content + delta } : m
               ))
+              const usageTokens = parsed.usage?.total_tokens ?? 0
+              if (usageTokens > 0) lastTokenCount = usageTokens
             } catch { /* ignore parse errors */ }
           }
         }
+        if (lastTokenCount > 0) {
+          reportTokens(user, llmProvider, lastTokenCount)
+          setTokenToast({ provider: llmProvider, tokens: lastTokenCount })
+        }
       } else {
         // Ollama — NDJSON streaming
+        let lastTokenCount = 0
         const res = await fetch(`${llmSaved.ollama.url}/api/chat`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -781,8 +796,16 @@ ${levelsHtml}
               if (delta) setChatMessages(prev => prev.map(m =>
                 m.id === assistantId ? { ...m, content: m.content + delta } : m
               ))
+              if (obj.done) {
+                const ollamaTokens = (obj.prompt_eval_count ?? 0) + (obj.eval_count ?? 0)
+                if (ollamaTokens > 0) lastTokenCount = ollamaTokens
+              }
             } catch { /* ignore parse errors */ }
           }
+        }
+        if (lastTokenCount > 0) {
+          reportTokens(user, llmProvider, lastTokenCount)
+          setTokenToast({ provider: llmProvider, tokens: lastTokenCount })
         }
       }
     } catch (e: unknown) {
@@ -815,6 +838,7 @@ ${levelsHtml}
   const currentSections = activeTopic?.levels[activeLevel] ?? []
 
   return (
+    <>
     <div className={`lr-root lr-root--${fontSize}${isDark ? '' : ' light'}`} onClick={() => setHighlight(null)}>
 
       {/* Sidebar */}
@@ -908,6 +932,7 @@ ${levelsHtml}
             >
               {isDark ? <SunIcon /> : <MoonIcon />}
             </button>
+            <AuthUserIcon />
           </div>
         </div>
 
@@ -1436,5 +1461,9 @@ ${levelsHtml}
         </div>
       )}
     </div>
+    {tokenToast && (
+      <TokenToast provider={tokenToast.provider} tokens={tokenToast.tokens} onDone={() => setTokenToast(null)} />
+    )}
+    </>
   )
 }
