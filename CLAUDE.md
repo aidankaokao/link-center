@@ -26,7 +26,7 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 
 ## 架構說明
 
-**路由** — 使用 `react-router-dom` v6 的 `BrowserRouter`。`App.tsx` 內部的 `AppRoutes` 元件定義所有路由，頁面對應如下：`/` → Home、`/link` → Link、`/chat` → Chat、`/tts` → Tts、`/celebrity` → Celebrity、`/learner` → Learner、`/ebook` → Ebook、`/paper` → PaperDoc、`/user-manage` → UserManage、`/admin-manage` → AdminManage、`/game` → Game、`/snake` → SnakeGame、`/tetris` → Tetris。頁面切換使用 `useNavigate`，子頁面返回首頁透過 `onBack` prop 傳入 `() => navigate('/')`；遊戲頁面（SnakeGame、Tetris）的 `onBack` 傳入 `() => navigate('/game')` 返回遊戲中心。
+**路由** — 使用 `react-router-dom` v6 的 `BrowserRouter`。`App.tsx` 內部的 `AppRoutes` 元件定義所有路由，頁面對應如下：`/` → Home、`/link` → Link、`/chat` → Chat、`/tts` → Tts、`/celebrity` → Celebrity、`/learner` → Learner、`/ebook` → Ebook、`/paper` → PaperDoc、`/user-manage` → UserManage、`/admin-manage` → AdminManage、`/game` → Game、`/snake` → SnakeGame、`/tetris` → Tetris、`/breakout` → Breakout、`/flappy` → FlappyBird、`/invaders` → Invaders。頁面切換使用 `useNavigate`，子頁面返回首頁透過 `onBack` prop 傳入 `() => navigate('/')`；遊戲頁面（SnakeGame、Tetris、Breakout、FlappyBird、Invaders）的 `onBack` 傳入 `() => navigate('/game')` 返回遊戲中心。
 
 **跨頁狀態** — `App.tsx` 以 `<AuthProvider>` 包住 `<AppRoutes>`，提供全域認證狀態。`AppRoutes` 另持有以下提升至 App 層的狀態：
 - `root: TreeItem[]` — `Link.tsx` 的完整連結／資料夾樹狀結構
@@ -49,9 +49,12 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 | `Learner.tsx` | 主題式互動學習頁面（`/learner`）。主題 JSON 存於 `data/learner/{id}.json`，server 動態讀取，無需重啟即可新增主題。左側 sidebar 依分類分組列出主題清單；分類標題在單一分類時隱藏，多分類時顯示為**可點擊按鈕**（`.lr-category-heading`），點擊折疊／展開該分類下的主題列表（`collapsedCats: Set<string>` state + CSS `max-height` transition）；折疊狀態由 chevron 圖示旋轉指示。分類標題樣式：深色模式為金色橫向漸層底色 + 金色文字；亮色模式為深海軍藍（`#1a3060`）底色 + 白色文字。右側主區顯示 hero、level tabs（初階／進階／高階）、各段落內容。段落支援：可點擊高亮關鍵詞（浮動 popover 說明）、程式練習（輸入批改 + 提示 + 答錯後出現「查看答案」按鈕）、行動建議清單。右上角控制列：文字大小切換（小／中／大）、**匯出主題 PDF**（印表機 icon，選中主題時才顯示，輸出所有層級的帶樣式 HTML，`window.print()` 觸發列印）、管理面板（⚙）、主題切換。右下角浮動聊天按鈕（Chat FAB）展開 LLM 問答面板（360×600px 懸浮卡片，AI 回覆以 `react-markdown + remark-gfm` 渲染 markdown，聊天記錄有內容時 header 出現**匯出問答 PDF** 按鈕，跨主題切換時保留各主題獨立對話記錄），聊天輸入框支援中文 IME（`isComposing` 防誤送）。聊天面板 header 顯示**服務商 badge**（金色膠囊，邏輯同 Chat.tsx：`convProvider ?? llmProvider`，鎖定於第一則訊息，切換主題時重設）。亮色模式使用者泡泡改為淡金色底（`rgba(200,169,110,0.18)`）以提升可讀性。管理面板（⚙）提供：**分類管理**（新增自訂分類、刪除空分類需輸入 `DELETE` 確認）、**LLM 設定**（三個服務商 tab：OpenAI API Key、Gemini API Key、Ollama URL + Model；各服務商設定獨立保留；Ollama 儲存時自動測試連線；所有設定僅存記憶體）、貼上 LLM 生成 JSON 匯入主題（可選擇分類，預設「未分類」）、各主題可移動分類、Prompt 生成器（輸入主題名稱後複製填好的 prompt）、各主題的下載 JSON 與刪除（刪除需輸入 `DELETE` 確認）。**Token 追蹤**：`handleChatSubmit` 加 token 計數（同 Chat.tsx 機制），Topbar 加 `<AuthUserIcon />`。 |
 | `UserManage.tsx` | 帳戶管理頁面（`/user-manage`，僅 user 角色可訪問；未登入自動 redirect `/`）。顯示帳號名稱、角色，以及累積 token 數。**修改密碼**：輸入目前密碼 + 新密碼 + 確認密碼（PUT `/api/user/password`）。**刪除帳號**：點擊按鈕彈出 modal，輸入密碼確認後 DELETE `/api/user/account`，成功後登出並跳回首頁。**Token 可視化**：近 30 天每日 stacked BarChart（openai=藍、gemini=金、ollama=綠）+ 本月 Provider donut PieChart，使用 `recharts`（MIT）。CSS 前綴 `.um-`，深色預設、`.light` 覆寫。 |
 | `AdminManage.tsx` | 系統管理頁面（`/admin-manage`，僅 admin 可訪問；非 admin 自動 redirect `/`）。**總覽**：全站使用者數 + 累積 token 數。**使用者列表**：所有非 admin 帳號（用 GET `/api/admin/users`），可點選列表項目過濾下方圖表；每列右側有「刪除」按鈕，需輸入 `DELETE` 確認後呼叫 `DELETE /api/admin/users/:username`。**Token 可視化**：同 UserManage，可切換「全站」或特定使用者視圖（`GET /api/token-usage/all`）。**資料保留設定**：下拉選單選擇 token 用量紀錄保留期間（一個月/兩個月/三個月/半年/一年，預設一年），儲存後立即清理過期資料（`PUT /api/admin/settings`），載入時自動讀取目前設定（`GET /api/admin/settings`）。**修改管理員密碼**：PUT `/api/user/password`。CSS 前綴 `.am-`，深色預設、`.light` 覆寫。 |
-| `Game.tsx` | 遊戲中心頁面（`/game`，admin only 從首頁進入）。以 Home 卡片風格列出所有遊戲：01 貪食蛇（`/snake`）、02 俄羅斯方塊（`/tetris`）。頂部 topbar：左側返回首頁按鈕 + 標題，右側主題切換 + `<AuthUserIcon />`（顯示用，無互動）。CSS 前綴 `.gm-`，深色預設、`.light` 覆寫，預設 `isDark=true`。 |
+| `Game.tsx` | 遊戲中心頁面（`/game`，admin only 從首頁進入）。以 Home 卡片風格列出全部 5 款遊戲：Snake 貪食蛇（`/snake`）、Tetris 俄羅斯方塊（`/tetris`）、Breakout 打磚塊（`/breakout`）、Flappy 飛翔小鳥（`/flappy`）、Invaders 太空侵略者（`/invaders`）。頂部 topbar：左側返回首頁按鈕 + 標題，右側主題切換 + `<AuthUserIcon />`（顯示用，無互動）。CSS 前綴 `.gm-`，深色預設、`.light` 覆寫，預設 `isDark=true`，`max-width: 900px`。 |
 | `SnakeGame.tsx` | 貪食蛇遊戲頁面（`/snake`）。Canvas 繪製，20×20 格（每格 25px）。`onBack` 返回 `/game`（遊戲中心）。綠色霓虹主題（`#00ff88`）。控制：方向鍵 / WASD；Space/P 暫停；R/Enter 重開。計分每食 +10，每 5 食升一級（加速），最高分存 `localStorage('snake-best')`。 |
 | `Tetris.tsx` | 俄羅斯方塊遊戲頁面（`/tetris`）。Canvas 繪製，10×20 格（每格 28px），主畫布 280×560。`onBack` 返回 `/game`。青藍霓虹主題（`#00e5ff`）。7-bag 隨機、ghost piece（半透明落點）、next piece 預覽、wall kick 旋轉。控制：← → 移動、↑ 旋轉、↓ 軟降、Space 硬降、P/Esc 暫停、Space 開始/重開。計分：1行×100、2行×300、3行×500、4行×800（×level）；每 10 行升一級（初始 800ms，每級 -60ms，最低 100ms）；最高分存 `localStorage('tetris-best')`。Side panel 顯示 next、score、best、level、lines。 |
+| `Breakout.tsx` | 打磚塊遊戲頁面（`/breakout`）。Canvas 420×520，5 行 × 8 列磚塊，橘紅霓虹主題（`#ff6b35`）。`onBack` 返回 `/game`。滑鼠 + 鍵盤（←→/AD）控制擋板。3 條命，每關加速（`baseSpeed = 3.8 + (level-1)*0.45`），行顏色漸層（粉→橘→黃→綠→青），最高分存 `localStorage('breakout-best')`。 |
+| `FlappyBird.tsx` | 飛翔小鳥遊戲頁面（`/flappy`）。Canvas 360×560，萊姆綠霓虹主題（`#c6ff00`）。`onBack` 返回 `/game`。重力 + 拍翅物理（GRAVITY=0.38，FLAP=-7.2），捲動水管隨機間距（GAP=148px），鳥身依速度傾斜渲染。控制：Space / ↑ / 點擊畫布；點擊或按鍵開始/重試。最高分存 `localStorage('flappy-best')`。 |
+| `Invaders.tsx` | 太空侵略者遊戲頁面（`/invaders`）。Canvas 420×540，紫色霓虹主題（`#e040fb`）。`onBack` 返回 `/game`。4 行 × 9 列外星人，整排步進移動（碰邊界後下移 + 反向），底排存活者隨機向下射擊，射擊頻率依關卡加速。3 條命，每關敵人步進間隔縮短，最高分存 `localStorage('invaders-best')`。控制：←→/AD 移動，Space/Z 射擊，P/Esc 暫停。 |
 
 **後端（server.js）** — Node.js 內建 HTTP server（無 express），ESM。除了服務靜態檔案外，提供：
 - `GET /api/links` — 讀取 `data/links.json`，回應帶 `ETag` header（MD5 hash 前 8 碼）
@@ -90,7 +93,84 @@ npx tsc --noEmit   # 僅執行型別檢查，不產生輸出
 
 新增頁面時請遵循以下設計規範，確保視覺一致性。
 
-### 色彩系統
+---
+
+> ⚠️ **重要：配色方案管理**
+>
+> 專案支援多套配色方案，切換配色時請完整替換所有頁面的 CSS 變數與背景漸層。目前使用**配色方案一**。
+> 若需恢復某套配色，直接以下方對應方案的完整數值覆寫所有 `{page}.css` 的根元素變數即可。
+
+---
+
+### 配色方案一：深藍金色（目前使用）
+
+**識別**：深邃海軍藍底 + 金麥色強調，沉穩典雅，適合資料/學習類應用。
+
+**CSS 變數（深色預設 / `.light` 覆寫）：**
+
+| 變數 | 深色 | 亮色 |
+|------|------|------|
+| `--bg` | `#050d1a` | `#eef3fb` |
+| `--surface` | `rgba(255,255,255,0.13)` | `#ffffff` |
+| `--border` | `rgba(255,255,255,0.18)` | `#c8d8f0` |
+| `--text` | `#e8e4dc` | `#0e1f3d` |
+| `--muted` | `#6b7a90` | `#6e82a4` |
+| `--gold` | `#c8a96e` | `#9a6f30` |
+| `--gold-dim` | `#8a7249` | `#b8924a` |
+| `--input-bg` | `rgba(255,255,255,0.07)` | `#f4f7fd` |
+| `--input-border` | `rgba(255,255,255,0.14)` | `#c0d0ec` |
+| `--input-focus` | `rgba(200,169,110,0.5)` | `#9a6f30` |
+| `--btn-primary` | `#c8a96e` | `#0e1f3d` |
+| `--btn-primary-text` | `#0a0a0a` | `#ffffff` |
+| `--danger` | `#e05c5c` | `#c94040` |
+| `--danger-hover` | `rgba(224,92,92,0.12)` | `rgba(201,64,64,0.08)` |
+
+**背景漸層：**
+
+```css
+/* 深色 */
+background:
+  radial-gradient(ellipse 70% 50% at 15% 10%, rgba(40,100,200,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 55% 45% at 85% 88%, rgba(20,60,150,0.15) 0%, transparent 55%),
+  linear-gradient(160deg, #0b1f40 0%, #050d1c 50%, #091528 100%);
+
+/* 亮色（標準） */
+background:
+  radial-gradient(ellipse 70% 50% at 15% 10%, rgba(100,160,255,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 55% 45% at 85% 88%, rgba(60,120,220,0.10) 0%, transparent 55%),
+  linear-gradient(160deg, #ddeaff 0%, #eef3fb 50%, #d8e8ff 100%);
+
+/* Learner 亮色例外（金色漸層） */
+background:
+  radial-gradient(ellipse 70% 50% at 15% 10%, rgba(200,169,110,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 55% 45% at 85% 88%, rgba(154,111,48,0.12) 0%, transparent 55%),
+  linear-gradient(160deg, #fdf6e8 0%, #ffffff 50%, #faf2e0 100%);
+```
+
+**新頁面 CSS 範本（配色方案一）：**
+
+```css
+/* ── Dark theme (default) ── */
+.{page}-root {
+  --bg: #050d1a; --surface: rgba(255,255,255,0.13); --border: rgba(255,255,255,0.18);
+  --text: #e8e4dc; --muted: #6b7a90; --gold: #c8a96e; --gold-dim: #8a7249;
+  --input-bg: rgba(255,255,255,0.07); --input-border: rgba(255,255,255,0.14);
+  --input-focus: rgba(200,169,110,0.5); --btn-primary: #c8a96e; --btn-primary-text: #0a0a0a;
+  --danger: #e05c5c; --danger-hover: rgba(224,92,92,0.12);
+}
+/* ── Light theme ── */
+.{page}-root.light {
+  --bg: #eef3fb; --surface: #ffffff; --border: #c8d8f0;
+  --text: #0e1f3d; --muted: #6e82a4; --gold: #9a6f30; --gold-dim: #b8924a;
+  --input-bg: #f4f7fd; --input-border: #c0d0ec; --input-focus: #9a6f30;
+  --btn-primary: #0e1f3d; --btn-primary-text: #ffffff;
+  --danger: #c94040; --danger-hover: rgba(201,64,64,0.08);
+}
+```
+
+---
+
+### 色彩系統（當前方案快查表）
 
 每個頁面在根元素（`{page}-root`）上定義 CSS 變數，深色為預設，亮色以 `.light` 覆寫：
 
@@ -261,27 +341,6 @@ transition: ... 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
 所有圖示使用 inline SVG（`viewBox="0 0 24 24"`），`fill="none"`、`stroke="currentColor"`、`strokeWidth="1.8"`、`strokeLinecap="round"`、`strokeLinejoin="round"`，尺寸透過父元素的 `width/height` 控制。不引入外部 icon library。
 
-### 新頁面 CSS 範本
-
-```css
-/* ── Dark theme (default) ── */
-.{page}-root {
-  --bg: #050d1a; --surface: rgba(255,255,255,0.13); --border: rgba(255,255,255,0.18);
-  --text: #e8e4dc; --muted: #6b7a90; --gold: #c8a96e; --gold-dim: #8a7249;
-  --input-bg: rgba(255,255,255,0.07); --input-border: rgba(255,255,255,0.14);
-  --input-focus: rgba(200,169,110,0.5); --btn-primary: #c8a96e; --btn-primary-text: #0a0a0a;
-  --danger: #e05c5c; --danger-hover: rgba(224,92,92,0.12);
-}
-/* ── Light theme ── */
-.{page}-root.light {
-  --bg: #eef3fb; --surface: #ffffff; --border: #c8d8f0;
-  --text: #0e1f3d; --muted: #6e82a4; --gold: #9a6f30; --gold-dim: #b8924a;
-  --input-bg: #f4f7fd; --input-border: #c0d0ec; --input-focus: #9a6f30;
-  --btn-primary: #0e1f3d; --btn-primary-text: #ffffff;
-  --danger: #c94040; --danger-hover: rgba(201,64,64,0.08);
-}
-```
-
 **新增頁面**
 
 1. 建立 `Page.tsx` 與 `Page.css`
@@ -290,7 +349,7 @@ transition: ... 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
 **新增首頁導覽卡片**
 
-`NAV_ITEMS` 中的每個項目需包含 `index`（顯示用數字字串）、`name`、`description`，以及以下三者之一：`page`（路由路徑字串，對應 `/<page>`）、`href`（外部連結）、`disabled: true`（停用）。
+`NAV_ITEMS` 中的每個項目需包含 `en`（卡片左上角英文標籤）、`name`、`description`，以及以下三者之一：`page`（路由路徑字串，對應 `/<page>`）、`href`（外部連結）、`disabled: true`（停用）。
 
 ## 部署
 
