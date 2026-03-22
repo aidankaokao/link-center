@@ -11,6 +11,11 @@ import PaperDoc from "./PaperDoc";
 import UserManage from "./UserManage";
 import AdminManage from "./AdminManage";
 import SnakeGame from "./SnakeGame";
+import Game from "./Game";
+import Tetris from "./Tetris";
+import Breakout from "./Breakout";
+import FlappyBird from "./FlappyBird";
+import Invaders from "./Invaders";
 import { AuthProvider } from "./AuthContext";
 
 function AppRoutes() {
@@ -62,6 +67,7 @@ function AppRoutes() {
   if (!loaded) return null;
 
   const goHome = () => navigate("/");
+  const goGame = () => navigate("/game");
 
   return (
     <>
@@ -81,7 +87,12 @@ function AppRoutes() {
         <Route path="/paper" element={<PaperDoc onBack={goHome} />} />
         <Route path="/user-manage" element={<UserManage onBack={goHome} />} />
         <Route path="/admin-manage" element={<AdminManage onBack={goHome} />} />
-        <Route path="/snake" element={<SnakeGame onBack={goHome} />} />
+        <Route path="/game"     element={<Game      onBack={goHome} />} />
+        <Route path="/snake"    element={<SnakeGame onBack={goGame} />} />
+        <Route path="/tetris"   element={<Tetris    onBack={goGame} />} />
+        <Route path="/breakout" element={<Breakout  onBack={goGame} />} />
+        <Route path="/flappy"   element={<FlappyBird onBack={goGame} />} />
+        <Route path="/invaders" element={<Invaders  onBack={goGame} />} />
       </Routes>
       {linkConflict && (
         <div

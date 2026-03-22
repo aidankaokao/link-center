@@ -4,7 +4,7 @@ import { useAuth } from "./AuthContext";
 import "./Home.css";
 
 interface NavItem {
-  index: string;
+  en: string;
   name: string;
   description: string;
   href?: string;
@@ -15,55 +15,41 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    index: "02",
+    en: "LLM Chat",
     name: "LLM 問答",
     description: "串接 OpenAI API，進行智慧問答對話，支援多輪上下文。",
     page: "chat",
   },
   {
-    index: "03",
+    en: "Biographies",
     name: "民國人物傳",
     description: "胡適、魯迅、傅斯年——民國思想巨擘的生平與著述。",
     page: "celebrity",
   },
   {
-    index: "04",
+    en: "Learner",
     name: "學習者",
     description: "以主題為單位的互動式學習，支援程式練習與行動建議。",
     page: "learner",
   },
   {
-    index: "05",
+    en: "E-Book",
     name: "電子書問答",
     description: "上傳 EPUB，自動分章整理，以 AI 深度問答書本內容。",
     page: "ebook",
   },
   {
-    index: "06",
+    en: "Research",
     name: "文獻探索",
     description:
       "輸入主題與需求描述，自動搜尋公開學術論文，選取 PDF 與 AI 深度問答。",
     page: "paper",
   },
   {
-    index: "07",
-    name: "帳戶管理",
-    description: "查看個人資料、修改密碼、檢視 Token 使用統計。",
-    page: "user-manage",
-    forRole: "user",
-  },
-  {
-    index: "08",
-    name: "系統管理",
-    description: "管理所有使用者帳號與 Token 用量統計。",
-    page: "admin-manage",
-    forRole: "admin",
-  },
-  {
-    index: "09",
-    name: "貪食蛇",
-    description: "貪食蛇遊戲。",
-    page: "snake",
+    en: "Games",
+    name: "遊戲",
+    description: "貪食蛇、俄羅斯方塊等小遊戲。",
+    page: "game",
     forRole: "admin",
   },
 ];
@@ -156,6 +142,7 @@ function EyeOffIcon() {
   );
 }
 
+
 export default function Home() {
   const navigate = useNavigate();
   const [isDark, setIsDark] = useState(false);
@@ -230,6 +217,7 @@ export default function Home() {
     : "var(--muted-home)";
 
   const visibleItems = NAV_ITEMS.filter((item) => {
+    if (user?.role === "admin") return item.forRole === "admin";
     if (!item.forRole) return true;
     if (!user) return false;
     return item.forRole === user.role;
@@ -288,10 +276,7 @@ export default function Home() {
                   {user.role !== "admin" && (
                     <button
                       className="home-popup-btn"
-                      onClick={() => {
-                        setPopupOpen(false);
-                        navigate("/user-manage");
-                      }}
+                      onClick={() => { setPopupOpen(false); navigate("/user-manage"); }}
                     >
                       帳戶管理
                     </button>
@@ -299,10 +284,7 @@ export default function Home() {
                   {user.role === "admin" && (
                     <button
                       className="home-popup-btn"
-                      onClick={() => {
-                        setPopupOpen(false);
-                        navigate("/admin-manage");
-                      }}
+                      onClick={() => { setPopupOpen(false); navigate("/admin-manage"); }}
                     >
                       系統管理
                     </button>
@@ -401,7 +383,7 @@ export default function Home() {
           className="nav-card nav-card--active"
           onClick={() => navigate("/link")}
         >
-          <span className="card-index">01</span>
+          <span className="card-index">Links</span>
           <div className="card-name">頁面連結</div>
           <p className="card-desc">
             新增、編輯或刪除自訂連結，打造專屬的快速導覽頁。
@@ -414,11 +396,11 @@ export default function Home() {
         {visibleItems.map((item) =>
           item.disabled ? (
             <div
-              key={item.index}
+              key={item.en}
               className="nav-card nav-card--disabled"
               aria-disabled="true"
             >
-              <span className="card-index">{item.index}</span>
+              <span className="card-index">{item.en}</span>
               <div className="card-name">{item.name}</div>
               <p className="card-desc">{item.description}</p>
               <div className="card-footer">
@@ -427,11 +409,11 @@ export default function Home() {
             </div>
           ) : item.page ? (
             <button
-              key={item.index}
+              key={item.en}
               className="nav-card nav-card--active"
               onClick={() => navigate(`/${item.page!}`)}
             >
-              <span className="card-index">{item.index}</span>
+              <span className="card-index">{item.en}</span>
               <div className="card-name">{item.name}</div>
               <p className="card-desc">{item.description}</p>
               <div className="card-footer">
@@ -441,13 +423,13 @@ export default function Home() {
             </button>
           ) : (
             <a
-              key={item.index}
+              key={item.en}
               href={item.href}
               target="_blank"
               rel="noopener noreferrer"
               className="nav-card nav-card--active"
             >
-              <span className="card-index">{item.index}</span>
+              <span className="card-index">{item.en}</span>
               <div className="card-name">{item.name}</div>
               <p className="card-desc">{item.description}</p>
               <div className="card-footer">
